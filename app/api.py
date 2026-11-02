@@ -7,9 +7,10 @@ import hmac
 import io
 import json
 import logging
+import os
+import re
 import sqlite3
 import time
-from collections import defaultdict,deque
 from contextlib import asynccontextmanager
 from datetime import timedelta
 from pathlib import Path
@@ -27,6 +28,35 @@ from .auth import Auth,SESSION_COOKIE
 from .models import *
 from .research import SourceGateway,TOOL_DESCRIPTIONS,validate_run_token
 from .mail import build_email
+from .vault import IntegrationStore
+from .setup import Credentials, register_setup, session_response
+
+
+class SecurityHeaders:
+    """Also cover early authentication failures and request-size rejections."""
+    def __init__(self,app,production=False):self.app,self.production=app,production
+    async def __call__(self,scope,receive,send):
+        if scope['type']!='http':return await self.app(scope,receive,send)
+        started=False
+        async def secured(message):
+            nonlocal started
+            if message['type']=='http.response.start':
+                started=True
+                headers=list(message.get('headers',[]))
+                headers.extend([
+                    (b'x-content-type-options',b'nosniff'),(b'x-frame-options',b'DENY'),
+                    (b'referrer-policy',b'no-referrer'),(b'cache-control',b'no-store'),
+                    (b'permissions-policy',b'camera=(), microphone=(), geolocation=()'),
+                    (b'content-security-policy',b"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'")])
+                if self.production:headers.append((b'strict-transport-security',b'max-age=31536000'))
+                message={**message,'headers':headers}
+            await send(message)
+        try:await self.app(scope,receive,secured)
+        except Exception as exc:
+            # Do not let provider exception strings reach Uvicorn's traceback log.
+            log.error('Request failed: %s',type(exc).__name__)
+            if not started:
+                await JSONResponse({'error':'The request could not be completed.'},status_code=500)(scope,receive,secured)
 
 log=logging.getLogger('civic.api')
 
@@ -34,7 +64,7 @@ class SizeLimit:
     """Buffer at most 1 MB before parsing; this also bounds chunked requests."""
     def __init__(self,app,max_bytes=1_000_000):self.app,self.max_bytes=app,max_bytes
     async def __call__(self,scope,receive,send):
-        if scope['type']!='http' or scope['method'] not in ('POST','PUT','PATCH'):
+        if scope['type']!='http' or scope['method'] not in ('POST','PUT','PATCH','DELETE'):
             return await self.app(scope,receive,send)
         chunks=[];total=0
         while True:
@@ -59,11 +89,14 @@ def create_app(config: Config | None=None) -> FastAPI:
     config.validate()
     db=Database(config.database_path,config.database_url)
     service=Service(db,config);auth=Auth(service);gateway=SourceGateway(service)
+    store=IntegrationStore(service)
     worker=None
     @asynccontextmanager
     async def lifespan(app):
         nonlocal worker
         db.migrate()
+        store.load()
+        store.verify_keys()
         if config.seed_on_start:service.seed_lakeland()
         auth.bootstrap()
         if config.run_worker:
@@ -74,7 +107,6 @@ def create_app(config: Config | None=None) -> FastAPI:
     app=FastAPI(title='Stakeout Civic',version='1.0.0',lifespan=lifespan,docs_url=None,redoc_url=None,openapi_url=None)
     app.add_middleware(SizeLimit)
     app.state.service,app.state.auth,app.state.config=service,auth,config
-    login_attempts=defaultdict(deque)
     allowed_host=urlsplit(config.base_url).hostname
 
     @app.exception_handler(DomainError)
@@ -85,6 +117,13 @@ def create_app(config: Config | None=None) -> FastAPI:
         return JSONResponse({'error':'Check the form fields.','details':details},status_code=422)
     @app.exception_handler(sqlite3.IntegrityError)
     async def duplicate(request,exc):return JSONResponse({'error':'A conflicting record already exists. Refresh before trying again.'},status_code=409)
+    @app.exception_handler(json.JSONDecodeError)
+    async def invalid_json(request,exc):return JSONResponse({'error':'Enter valid JSON.'},status_code=400)
+    @app.exception_handler(Exception)
+    async def unexpected(request,exc):
+        # Exception messages and tracebacks may contain provider credentials.
+        log.error('Request failed: %s',type(exc).__name__)
+        return JSONResponse({'error':'The request could not be completed.'},status_code=500,headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'})
 
     @app.middleware('http')
     async def security(request: Request,call_next):
@@ -97,52 +136,60 @@ def create_app(config: Config | None=None) -> FastAPI:
                     return JSONResponse({'error':'Local mode only accepts loopback requests.'},status_code=403)
             elif config.mode=='production' and host!=allowed_host:
                 return JSONResponse({'error':'Unrecognized host.'},status_code=400)
-        if path.startswith('/api/') and path not in ('/api/session','/api/login'):
+            if config.mode=='production' and request.url.scheme!='https':
+                # Railway terminates TLS and overwrites this header. Never trust
+                # client-supplied forwarded addresses for authentication limits.
+                edge_https=bool(os.getenv('RAILWAY_ENVIRONMENT_ID')) and request.headers.get('x-forwarded-proto')=='https'
+                if not edge_https:return JSONResponse({'error':'Use the configured HTTPS application address.'},status_code=400)
+        public_api={'/api/session','/api/login','/api/setup/status','/api/setup/enrollment','/api/setup/bootstrap'}
+        if path.startswith('/api/') and request.method in ('POST','PUT','PATCH','DELETE'):
+            origin=request.headers.get('origin')
+            if (origin and origin.rstrip('/')!=config.base_url) or request.headers.get('sec-fetch-site')=='cross-site':
+                return JSONResponse({'error':'Cross-origin requests are not allowed.'},status_code=403)
+            if request.headers.get('content-type','').split(';')[0].lower()!='application/json':
+                return JSONResponse({'error':'Use application/json.'},status_code=415)
+            try:
+                if path=='/api/login':await run_in_threadpool(auth.rate_limit,'login-global',60,60)
+                if path in ('/api/setup/enrollment','/api/setup/bootstrap'):
+                    await run_in_threadpool(auth.rate_limit,'setup-global',20,600)
+            except DomainError as exc:
+                return JSONResponse({'error':str(exc)},status_code=exc.status)
+        if path.startswith('/api/') and path not in public_api:
             session=await run_in_threadpool(auth.session,request.cookies.get(SESSION_COOKIE))
             if not session:return JSONResponse({'error':'Sign in to continue.'},status_code=401)
             request.state.session=session
+            role=session['user']['role']
+            if (path.startswith('/api/settings/integrations') or path.startswith('/api/setup/')) and role!='admin':
+                return JSONResponse({'error':'Administrator access required.'},status_code=403)
             if request.method in ('POST','PUT','PATCH','DELETE'):
                 if not hmac.compare_digest(request.headers.get('x-csrf-token',''),session['csrf']):
                     return JSONResponse({'error':'Session verification failed. Reload the page.'},status_code=403)
+                if path=='/api/settings/integrations' and not await run_in_threadpool(auth.elevated,request.cookies.get(SESSION_COOKIE)):
+                    return JSONResponse({'error':'Confirm your password and authenticator again. Reopen Setup & connections.'},status_code=403)
                 origin=request.headers.get('origin')
                 if origin and origin.rstrip('/')!=config.base_url:
                     return JSONResponse({'error':'Cross-origin requests are not allowed.'},status_code=403)
-                role=session['user']['role']
-                if role=='viewer':return JSONResponse({'error':'This account is read-only.'},status_code=403)
-                review_action=('/review' in path or '/contacts' in path or path.endswith('/approve') or '/draft' in path or (request.method=='PATCH' and '/messages/' in path))
+                own_security=path.startswith('/api/security/')
+                if role=='viewer' and not own_security and path!='/api/logout':return JSONResponse({'error':'This account is read-only.'},status_code=403)
+                review_action=(request.method=='POST' and re.fullmatch(r'/api/(entities/[^/]+/(review|contacts)|messages/[^/]+/approve|conversations/[^/]+/draft)',path)) or (request.method=='PATCH' and re.fullmatch(r'/api/messages/[^/]+',path)) or own_security or path=='/api/logout'
                 if role!='admin' and not review_action:
                     return JSONResponse({'error':'An administrator must perform this action.'},status_code=403)
-        response=await call_next(request)
-        response.headers['X-Content-Type-Options']='nosniff'
-        response.headers['X-Frame-Options']='DENY'
-        response.headers['Referrer-Policy']='same-origin'
-        response.headers['Permissions-Policy']='camera=(), microphone=(), geolocation=()'
-        response.headers['Content-Security-Policy']="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
-        if path.startswith('/api/') or path.startswith('/unsubscribe'):
-            response.headers['Cache-Control']='no-store'
-        if config.mode=='production':response.headers['Strict-Transport-Security']='max-age=31536000'
-        return response
+        return await call_next(request)
+
+    app.add_middleware(SecurityHeaders,production=config.mode=='production')
+    register_setup(app,auth,store)
 
     def actor(request):return request.state.session['user'].get('email') or 'local-operator'
 
     @app.get('/health')
-    def health():return {'status':'ok','application':'stakeout-civic'}
+    def health():
+        with db.transaction(False) as tx:tx.one('SELECT version FROM schema_versions LIMIT 1')
+        return {'status':'ok','application':'stakeout-civic'}
     @app.get('/api/session')
     def session(request: Request):return auth.session(request.cookies.get(SESSION_COOKIE)) or {'user':None,'csrf':None}
     @app.post('/api/login')
-    async def login(request: Request):
-        if request.headers.get('origin') and request.headers['origin'].rstrip('/')!=config.base_url:raise DomainError('Cross-origin login is not allowed.',403)
-        peer=request.client.host if request.client else 'unknown'
-        attempts=login_attempts[peer]
-        while attempts and attempts[0]<time.monotonic()-600:attempts.popleft()
-        if len(attempts)>=8:raise DomainError('Too many sign-in attempts. Try again later.',429)
-        attempts.append(time.monotonic())
-        data=await request.json()
-        if not isinstance(data,dict):raise DomainError('Invalid sign-in request.')
-        result=await run_in_threadpool(auth.login,str(data.get('email',''))[:300],str(data.get('password',''))[:513])
-        response=JSONResponse({'user':result['user'],'csrf':result['csrf']})
-        response.set_cookie(SESSION_COOKIE,result['token'],max_age=43200,httponly=True,secure=config.mode=='production',samesite='strict',path='/')
-        return response
+    def login(data: Credentials):
+        return session_response(auth.login(data.email,data.password,data.code),config)
     @app.post('/api/logout')
     def logout(request: Request):
         auth.logout(request.cookies.get(SESSION_COOKIE))

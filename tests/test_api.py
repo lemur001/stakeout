@@ -1,4 +1,4 @@
-import hashlib,hmac,json,time
+import base64,hashlib,hmac,json,time
 from dataclasses import replace
 import pytest
 from fastapi.testclient import TestClient
@@ -83,7 +83,7 @@ def test_signed_webhook_and_duplicate(client):
  assert response.json()['duplicate'] is True
 
 def test_production_authentication_and_roles(tmp_path):
- cfg=Config(mode='production',base_url='https://civic.example.org',database_path=str(tmp_path/'prod.sqlite3'),run_worker=False,seed_on_start=False,app_secret='s'*48,admin_email='admin@example.org',admin_password='long-password-for-testing-only')
+ cfg=Config(mode='production',base_url='https://civic.example.org',database_path=str(tmp_path/'prod.sqlite3'),run_worker=False,seed_on_start=False,app_secret='s'*48,encryption_key=base64.urlsafe_b64encode(b'k'*32).decode(),admin_email='admin@example.org',admin_password='long-password-for-testing-only')
  with TestClient(create_app(cfg),base_url=cfg.base_url) as c:
   assert c.get('/api/state').status_code==401
   assert c.post('/api/login',json={'email':cfg.admin_email,'password':'wrong'}).status_code==401

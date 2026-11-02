@@ -1,20 +1,23 @@
 import {api,setCsrf} from './api.js';
+import {showSetup} from './setup.js';
 import * as P from './pages.js';
 import * as D from './dialogs.js';
 import {escape as e,icon,dialog,closeDialogs,toast,button} from './ui.js';
-let state,user,session,route='overview',outreachTab='all';
+let state,user,session,pendingMfa=null,settingUp=false,route='overview',outreachTab='all';
 const filters={city:'',query:'',status:'',website:''};const selected=new Set();
 const root=document.querySelector('#app');
 function currentRoute(){const r=location.hash.slice(1).split('?')[0];return P.navItems.some(x=>x[0]===r)?r:'overview';}
 function renderPage(){if(!state)return;const el=document.querySelector('#page');if(!el)return;
- el.innerHTML=route==='prospects'?P.prospects(state,filters,selected):route==='outreach'?P.outreach(state,outreachTab):P[route](state);
+ el.innerHTML=route==='prospects'?P.prospects(state,filters,selected):route==='outreach'?P.outreach(state,outreachTab):P[route](state,user);
  document.title=`${P.navItems.find(x=>x[0]===route)[2]} · Stakeout Civic`;
 }
-function render(){if(!state)return;route=currentRoute();root.innerHTML=P.shell(state,route,user);renderPage();}
+function render(){if(!state||settingUp)return;route=currentRoute();root.innerHTML=P.shell(state,route,user);renderPage();}
 function go(to){closeDialogs();document.body.classList.remove('nav-open');if(location.hash==='#'+to){route=to;render();}else location.hash=to;}
 async function reload(full=true){state=await api('/api/state');if(full)render();}
-function loginScreen(error='') {root.innerHTML=`<main class="login-layout"><div class="login-brand"><img src="/assets/favicon.svg" alt="" width="44" height="44"><strong>Stakeout Civic</strong></div><section class="login-card"><h1>Your community workspace.</h1><p>Sign in to manage research, sponsorships and website delivery.</p>${error?`<p class="login-error" role="alert">${e(error)}</p>`:''}<form data-form="login"><label class="field"><span>Email address</span><input type="email" name="email" required autocomplete="username"></label><label class="field"><span>Password</span><input type="password" name="password" required autocomplete="current-password"></label><button type="submit" class="btn primary">Sign in ${icon('arrow')}</button></form><p class="muted login-help">Access is restricted to your agency’s approved operators.</p></section></main>`;}
-async function init(){try{session=await api('/api/session');user=session.user;setCsrf(session.csrf);if(!user)return loginScreen();await reload();}catch(error){root.innerHTML=`<main class="public-card"><h1>The workspace did not load.</h1><p>${e(error.message)}</p><button class="btn primary" data-action="reload-page">Try again</button></main>`;}}
+function loginScreen(error='') {root.innerHTML=`<main class="login-layout"><div class="login-brand"><img src="/assets/favicon.svg" alt="" width="44" height="44"><strong>Stakeout Civic</strong></div><section class="login-card"><h1>Your community workspace.</h1><p>Sign in to manage research, sponsorships and website delivery.</p>${error?`<p class="login-error" role="alert">${e(error)}</p>`:''}<form data-form="login"><label class="field"><span>Email address</span><input type="email" name="email" required autocomplete="username"></label><label class="field"><span>Password</span><input type="password" name="password" required maxlength="512" autocomplete="current-password"></label><label class="field"><span>Authenticator or recovery code</span><input name="code" autocomplete="one-time-code" maxlength="64"><small>Required when two-factor authentication is enabled.</small></label><button type="submit" class="btn primary">Sign in ${icon('arrow')}</button></form><p class="muted login-help">Access is restricted to your agency’s approved operators.</p></section></main>`;}
+async function setupWizard(newAdmin=false){settingUp=true;closeDialogs();await showSetup(root,{newAdmin,onSession:r=>{user=r.user;setCsrf(r.csrf);},onDone:async()=>{settingUp=false;location.hash='overview';await reload();}});}
+async function afterLogin(){if(user?.role==='admin'){const c=await api('/api/setup/checklist');if(c.production&&!c.complete)return setupWizard();}await reload();}
+async function init(){try{const s=await api('/api/setup/status');if(s.needs_setup)return setupWizard(true);session=await api('/api/session');user=session.user;setCsrf(session.csrf);if(!user)return loginScreen();await afterLogin();}catch(error){root.innerHTML=`<main class="public-card"><h1>The workspace did not load.</h1><p>${e(error.message)}</p><button class="btn primary" data-action="reload-page">Try again</button></main>`;}}
 async function openMessage(id){D.messageSheet(state,await api('/api/messages/'+id));}
 function formValues(form){return Object.fromEntries(new FormData(form));}
 async function saveMessage(form){const v=formValues(form);return api('/api/messages/'+form.dataset.id,{subject:v.subject,body:v.body},'PATCH');}
@@ -22,6 +25,9 @@ function fail(error){if(error.status===401){user=null;closeDialogs();loginScreen
 async function clickAction(target){const a=target.dataset.action,id=target.dataset.id;
  if(a.startsWith('go-')){go(a.slice(3));return;}
  switch(a){
+ case 'setup-wizard':return setupWizard();
+ case 'account-mfa':return dialog('modal','Authenticator & recovery codes','Enroll an authenticator or replace an existing one. Replacement revokes old recovery codes and signs out other sessions.',`<form data-form="mfa-enroll" class="form-body"><label class="field"><span>Current password</span><input type="password" name="password" required autocomplete="current-password"></label><label class="field"><span>Current authenticator or recovery code</span><input name="code" autocomplete="one-time-code" maxlength="64"><small>Leave blank only if you have not enrolled MFA yet.</small></label><button class="btn primary" type="submit">Set up authenticator</button></form>`);
+ case 'account-password':return dialog('modal','Change password','Your current password and a fresh authenticator or recovery code are required.',`<form data-form="password" class="form-body"><label class="field"><span>Current password</span><input type="password" name="password" required autocomplete="current-password"></label><label class="field"><span>Authenticator or recovery code</span><input name="code" autocomplete="one-time-code" maxlength="64"></label><label class="field"><span>New password</span><input type="password" name="new_password" required minlength="16" maxlength="512" autocomplete="new-password"></label><button class="btn primary" type="submit">Change password and revoke other sessions</button></form>`);
  case 'reload-page':return location.reload();
  case 'menu':document.body.classList.toggle('nav-open');return;
  case 'close-sheet':document.querySelector('#sheet').close();return;
@@ -69,7 +75,18 @@ document.addEventListener('submit',async ev=>{
  const form=ev.target;if(!form.matches('[data-form]'))return;ev.preventDefault();if(!form.reportValidity())return;
  const kind=form.dataset.form,id=form.dataset.id,v=formValues(form);const buttons=form.querySelectorAll('button');buttons.forEach(b=>b.disabled=true);
  try{
-  if(kind==='login'){const result=await api('/api/login',{email:v.email,password:v.password});user=result.user;setCsrf(result.csrf);await reload();return;}
+  if(kind==='login'){const result=await api('/api/login',{email:v.email,password:v.password,code:v.code});user=result.user;setCsrf(result.csrf);await afterLogin();return;}
+  if(kind==='password'){const result=await api('/api/security/password',v);user=result.user;setCsrf(result.csrf);closeDialogs();toast('Password changed. Other sessions were signed out.');return;}
+  if(kind==='mfa-enroll'){
+   const result=await api('/api/security/mfa/enrollment',v);pendingMfa={password:v.password,enrollment:result.enrollment};
+   dialog('modal','Add your authenticator','Enter the setup key into a time-based authenticator account.',`<form data-form="mfa-confirm" class="form-body"><label class="field"><span>New authenticator setup key</span><input readonly value="${e(result.secret)}"></label><label class="field"><span>New authenticator code</span><input name="new_code" required pattern="[0-9]{6}" inputmode="numeric" autocomplete="one-time-code"></label><label class="field"><span>Current authenticator or recovery code</span><input name="code" maxlength="64" autocomplete="off"><small>If replacing MFA, use a fresh code from your old authenticator or another unused recovery code. Otherwise leave blank.</small></label><button class="btn primary" type="submit">Confirm authenticator</button></form>`);return;
+  }
+  if(kind==='mfa-confirm'){
+   if(!pendingMfa)throw new Error('Start authenticator setup again.');
+   const result=await api('/api/security/mfa/confirm',{...pendingMfa,...v});pendingMfa=null;user=result.user;setCsrf(result.csrf);
+   dialog('modal','Save your new recovery codes','These replace your old codes. Each works once. Save them privately in a password manager.',`<form data-form="mfa-saved" class="form-body"><pre class="recovery-codes">${result.recovery_codes.map(e).join('\n')}</pre><label class="checkbox-line"><input name="saved" type="checkbox" required><span>I saved these recovery codes securely.</span></label><button class="btn primary" type="submit">Done</button></form>`);return;
+  }
+  if(kind==='mfa-saved'){closeDialogs();toast('Authenticator updated. Other sessions were signed out.');return;}
   if(kind==='profile'){await api('/api/settings/profile',v,'PUT');await reload();toast('Sender identity saved. Existing approvals may need renewal.');return;}
   if(kind==='city'){await api('/api/cities',{name:v.name,region:v.region,country:'US',timezone:v.timezone});closeDialogs();await reload();go('cities');toast('City added to the shared catalog.');return;}
   if(kind==='client'){
@@ -115,7 +132,8 @@ document.addEventListener('change',async ev=>{
 });
 let searchTimer;document.addEventListener('input',ev=>{if(ev.target.dataset.filter==='query'){filters.query=ev.target.value;clearTimeout(searchTimer);searchTimer=setTimeout(()=>{renderPage();const t=document.querySelector('#prospect-search');t?.focus();},160);}});
 window.addEventListener('hashchange',()=>{route=currentRoute();document.body.classList.remove('nav-open');closeDialogs();render();window.scrollTo(0,0);});
+document.querySelector('#modal').addEventListener('close',()=>{pendingMfa=null;});
 window.addEventListener('unhandledrejection',ev=>{ev.preventDefault();fail(ev.reason instanceof Error?ev.reason:new Error('Unexpected application error.'));});
 // Do not replace forms or dialogs while an operator is editing them.
-setInterval(async()=>{if(user&&!document.hidden&&!document.querySelector('dialog[open]')&&!document.activeElement?.matches('input,textarea,select')&&route!=='settings'){try{await reload();}catch(error){if(error.status===401)fail(error);}}},30000);
+setInterval(async()=>{if(user&&!settingUp&&!document.hidden&&!document.querySelector('dialog[open]')&&!document.activeElement?.matches('input,textarea,select')&&route!=='settings'){try{await reload();}catch(error){if(error.status===401)fail(error);}}},30000);
 init();

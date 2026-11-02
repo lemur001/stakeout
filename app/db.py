@@ -74,6 +74,7 @@ class Database:
             for stmt in statements:
                 if stmt.strip(): tx.execute(stmt)
             tx.execute('INSERT INTO schema_versions(version,applied_at) VALUES(1,?) ON CONFLICT(version) DO NOTHING',(iso(),))
+            tx.execute('INSERT INTO schema_versions(version,applied_at) VALUES(2,?) ON CONFLICT(version) DO NOTHING',(iso(),))
             if tx.setting('profile') is None:
                 tx.set_setting('profile',{'agency_name':'Stakeout Search','sender_name':'','sender_email':'','postal_address':''})
             if tx.setting('paused') is None: tx.set_setting('paused',True)

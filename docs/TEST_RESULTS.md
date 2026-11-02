@@ -1,4 +1,32 @@
-# Verification record — October 2, 2026
+# Security update verification — November 1, 2026
+
+The security update was tested with Python **3.13.18** on Windows: **83 tests passed**. The expanded suite includes setup-token replay/races, MFA and recovery-code replay, encrypted persistence, key rotation, secret redaction, role/CSRF checks, fresh authentication for credential changes, HTTPS requirements, and private-network mail destination rejection. The original 57 tests remain in the suite.
+
+The runtime dependency audit of the hash-verified lock returned **no known vulnerabilities**. Every browser ES module passed the Node syntax check. The HTTPS browser wizard was tested with synthetic credentials at desktop and mobile widths; no live provider credentials or email sends were used. Container and Railway commissioning are separate checks; see [SECURITY_AUDIT.md](SECURITY_AUDIT.md) and [RAILWAY.md](RAILWAY.md).
+
+[Linux CI](https://github.com/lemur001/stakeout/actions/runs/41387886236) also passed all 83 tests, the locked dependency audit, static scan gate, and real HTTPS browser workflow. It built the Docker image, booted it with a persistent volume, verified PID 1 runs as UID 10001, confirmed setup and health endpoints, and successfully restarted the container.
+
+## Railway launch verification — November 2, 2026 UTC
+
+Deployed commit: `63808bd4fb10d8797423a29af71d58311edb2402`.
+Railway deployment: `deb430b1-cd8c-4d1b-979b-0dc794d005ff` (SUCCESS).
+
+- Docker image built, 1 GB persistent volume mounted at `/app/data`, healthcheck passed.
+- Public HTTPS certificate verified by the HTTP client; browser rendered the first setup screen.
+- `/health`, `/`, and `/api/setup/status` returned 200; status reported `needs_setup: true`.
+- Anonymous integration settings and setup checklist requests returned 401.
+- A fabricated setup token and a cross-origin setup enrollment request each returned 403.
+- No-store, HSTS, nosniff and CSP framing protections were present on checked responses.
+- No owner account was claimed, no real provider credentials were supplied, and live email remained disabled.
+
+Restart persistence was tested in Linux CI. Production owner enrollment, live provider tests,
+encryption-key recovery backups and a real volume restoration remain unverified. The reusable
+Railway template specification is prepared, but its share URL and GitHub deployment badge
+remain pending template creation in the Railway dashboard.
+
+The historical record below describes the original build and its original verification environment.
+
+# Original verification record — October 2, 2026
 
 ## Automated suite
 

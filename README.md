@@ -2,11 +2,19 @@
 
 A working, single-agency, multi-client workspace for city research, civic website sponsorship proposals and website-delivery tracking. **No Twenty, external CRM, Node build step, or cloud account is required for the local dashboard.**
 
-This is an operating first release, not an unattended production service. Gemini and mail adapters are implemented, but were not exercised against live accounts during this build. Public deployment, a funded Gemini API account, licensed source access and an approved sending mailbox still need to be connected. No emails have been sent or websites published.
+## Secure Railway setup
+
+For a new hosted workspace, follow [the Railway deployment guide](docs/RAILWAY.md). A [reusable template specification](docs/RAILWAY_TEMPLATE.md) and [automatically generated template variables](deploy/railway-template.env) are prepared; saving the template in Railway and adding its actual deployment button are still pending. The wizard creates an administrator with an Argon2id password hash, authenticator-based MFA and recovery codes, then guides you through your agency identity and optional research/mail connections.
+
+Integration credentials and authenticator seeds are encrypted with AES-256-GCM before storage. The encryption key stays in a Railway variable, separately from the database; seal it after saving a separate recovery copy. Saved passwords and API keys are never returned by the settings API or included in workspace exports. The server must decrypt credentials in memory to use them; encryption does not protect against compromise of the running server or the Railway account.
+
+See [the security audit](docs/SECURITY_AUDIT.md) for findings, fixes, verification and remaining deployment checks. The Docker image installs [the hash-verified runtime lock](requirements.lock); CI tests the image and wizard. The audited branch has also launched successfully on Railway with public HTTPS and a persistent volume; initial administrator enrollment and provider setup remain for the owner.
+
+This is an operating first release, not an unattended production service. Gemini and mail adapters are implemented, but were not exercised against live accounts during this build. A funded Gemini API account, licensed source access and an approved sending mailbox still need to be connected. No emails have been sent.
 
 ## Start on your computer
 
-Use Python **3.12 or 3.13**. Verification used Python 3.13.5. An internet connection is needed for the first dependency installation.
+Use Python **3.13** for parity with the Railway image. An internet connection is needed for the first dependency installation.
 
 **Windows:** extract the ZIP, open its `stakeout-civic` folder and double-click `START_WINDOWS.cmd`. Keep the command window open.
 
@@ -30,7 +38,7 @@ python -m venv .venv
 .venv/bin/python run.py
 ```
 
-If port 8080 is occupied, copy `.env.example` to `.env` and set both `PORT=8787` and `APP_URL=http://127.0.0.1:8787`. The application reads `.env` at startup. Restart after configuration changes. OS environment variables take precedence.
+If port 8080 is occupied, copy `.env.example` to `.env` and set both `PORT=8787` and `APP_URL=http://127.0.0.1:8787`. The application reads `.env` at startup. Restart after boot configuration changes. OS environment variables take precedence over `.env`; encrypted integration values saved through the wizard take precedence over both for the fields it manages.
 
 The default database is `data/civic.sqlite3`. It is created automatically. Do not delete it to fix an integration error. Closing the server does not delete saved work.
 
@@ -63,7 +71,7 @@ The Lakeland seed starts with **23 organizations, 17 distinct email endpoints an
 
 Manual report storage and candidate JSON validation work locally. Extraction of a stored report needs `GEMINI_API_KEY`. Fully automated Deep Research also needs your public authenticated HTTPS application, because Gemini must reach its `/mcp` endpoint.
 
-Set server-side variables in `.env` for local extraction, or your hosting provider’s private variables for public operation:
+For hosted operation, use **Settings → Setup & connections** to save credentials encrypted. Server-side environment variables remain available for local use and legacy operation; the wizard's saved values override them:
 
 ```dotenv
 GEMINI_API_KEY=
@@ -108,7 +116,7 @@ For multiple mailbox folders, or providers using nonstandard bounce/complaint fo
 
 ## Deploy as one service
 
-The included Dockerfile serves both dashboard and API; the worker can run in the same process. No Vercel frontend or second CRM service is necessary. The Docker image and Railway deployment were **not built or deployed in this environment**; the configuration is supplied for your deployment.
+The included Dockerfile serves both dashboard and API; the worker runs in the same process for the pilot. Follow [docs/RAILWAY.md](docs/RAILWAY.md) for deployment and acceptance checks. Linux CI verified the image's unprivileged server UID and persistence across a restart. A real Railway launch passed health, HTTPS, setup-page, anonymous-access and invalid-token checks. Provider connections and backup restoration still need commissioning.
 
 Before exposing the application, configure:
 
@@ -117,17 +125,17 @@ APP_MODE=production
 HOST=0.0.0.0
 APP_URL=https://YOUR-ACTUAL-APPLICATION-HOST
 APP_SECRET=
-ADMIN_EMAIL=
-ADMIN_PASSWORD=
+ENCRYPTION_KEY=
+SETUP_TOKEN=
 RUN_WORKER=true
 ALLOW_LIVE_SEND=false
 ```
 
-Generate `APP_SECRET` with `python -c "import secrets; print(secrets.token_urlsafe(48))"`. Use an administrator password of at least 16 characters. Do not publish `.env`. The process deliberately refuses insecure production configuration. `ADMIN_PASSWORD` provisions a missing admin only; changing it does not rotate an existing account’s password.
+Run `python scripts/generate_deploy_env.py` to generate independent boot secrets into a private, Git-ignored transfer file. Copy them into Railway variables and your password manager, then remove the transfer file. Create your password and MFA in the browser wizard. Remove `SETUP_TOKEN` after the workspace is claimed. Keep `APP_SECRET` and `ENCRYPTION_KEY` stable and backed up. Legacy `ADMIN_EMAIL`/`ADMIN_PASSWORD` provisioning remains available only for an empty workspace; existing accounts are never reset by changing environment variables.
 
-Use **one web/worker instance** for the pilot. Either attach a persistent writable volume at `/app/data` for SQLite, or configure PostgreSQL. An ephemeral filesystem will lose your workspace after a redeploy. A container volume mounted by the host must be writable by the image’s UID 10001.
+Use **one web/worker instance** for the pilot. Attach a persistent volume at `/app/data` for SQLite. Railway startup refuses an ephemeral SQLite path. The container entrypoint initializes the volume permissions, then drops permanently to UID/GID 10001 before starting the application. Keep the configured `python docker_entrypoint.py` start command.
 
-For PostgreSQL or Supabase, install `requirements-postgres.txt` and set a server-only `DATABASE_URL` with TLS. The adapter creates tables in a private `civic` schema and does not expose it through Supabase’s Data API. Use a dedicated database role, not credentials shipped to the browser. For a persistent worker, use a direct connection or an appropriate session-pooler connection. Keep `civic` out of exposed schemas and review role grants before launch.
+For PostgreSQL or Supabase, install `requirements-postgres.txt` and set a server-only `DATABASE_URL` with `sslmode=verify-full` and a trusted server certificate. The adapter creates tables in a private `civic` schema and does not expose it through Supabase’s Data API. Use a dedicated database role, not credentials shipped to the browser. For a persistent worker, use a direct connection or an appropriate session-pooler connection. Keep `civic` out of exposed schemas and review role grants before launch.
 
 **The PostgreSQL adapter was not exercised against a live database in this build.** Test migrations, permissions, TLS, restart recovery, concurrency and backup restoration in staging before choosing it for client work. Changing `DATABASE_URL` does not automatically migrate existing SQLite records. A migration tool is not included.
 
@@ -161,4 +169,4 @@ The SQLite backup script uses the backup API to include live WAL contents. Keep 
 
 This is a complete local workspace and integration implementation, not a claim that all external systems have been commissioned. It does not automatically register domains, build or publish the sponsored websites, collect payments, establish email deliverability, verify board authority, guarantee backlinks, or guarantee rankings. Website production is tracked through projects and exported briefs. Sponsorship acknowledgements should be visible and qualified with `rel="sponsored"` or `rel="nofollow"`; organizations retain their domain and content.
 
-There is no mailbox OAuth setup UI, SSO/MFA, per-client login isolation, automatic SQLite-to-Postgres migration, provider spend reconciliation or complete large-catalog pagination. Schema upgrades beyond this initial version will need versioned migrations. Supplied production configuration requires a staged live provider/database acceptance test before client rollout.
+There is no mailbox OAuth setup UI, SSO/passkey authentication, per-client login isolation, automatic SQLite-to-Postgres migration, provider spend reconciliation or complete large-catalog pagination. TOTP MFA and recovery codes are included. Schema version 2 adds the credential and authentication-security tables without deleting existing records. Production configuration still requires staged live provider/database acceptance tests before client rollout.

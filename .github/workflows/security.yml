@@ -1,0 +1,56 @@
+name: Security and deployment checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
+      - name: Install locked runtime and test tools
+        run: |
+          python -m pip install --require-hashes -r requirements.lock
+          python -m pip install -r requirements-dev.txt -r requirements-security.txt
+      - run: python -m pytest -q
+      - name: Audit runtime dependencies
+        run: python -m pip_audit -r requirements.lock --progress-spinner off
+      - name: Static security scan
+        # The two reviewed findings are an allowlisted SQL table name and the
+        # required production bind address. Emit the full report and gate on
+        # high-severity findings; new findings still need human triage.
+        run: |
+          python -m bandit -r app scripts run.py worker.py docker_entrypoint.py -ll -q || test "$?" = 1
+          python -m bandit -r app scripts run.py worker.py docker_entrypoint.py -lll -q
+      - name: Browser wizard over HTTPS
+        run: |
+          python -m playwright install --with-deps chromium
+          python scripts/test_browser_setup.py
+      - name: Build and boot the deployment image
+        run: |
+          docker build -t stakeout-test .
+          mkdir -p .local
+          python scripts/generate_deploy_env.py --output .local/ci.env
+          docker volume create stakeout-test-data
+          docker run -d --name stakeout-smoke --env-file .local/ci.env -e APP_URL=https://stakeout.example.org -e RAILWAY_ENVIRONMENT_ID=ci -e RAILWAY_VOLUME_MOUNT_PATH=/app/data -p 127.0.0.1:8080:8080 -v stakeout-test-data:/app/data stakeout-test
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8080/health; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:8080/health
+          curl --fail --silent -H 'Host: stakeout.example.org' -H 'X-Forwarded-Proto: https' http://127.0.0.1:8080/api/setup/status | python -c "import json,sys; assert json.load(sys.stdin)['needs_setup']"
+          docker exec stakeout-smoke python -c "from pathlib import Path; status=Path('/proc/1/status').read_text(); assert 'Uid:\t10001\t10001\t10001\t10001' in status; assert not Path('/app/.env.railway').exists()"
+          docker restart stakeout-smoke
+          sleep 3
+          curl --fail --silent http://127.0.0.1:8080/health
+      - name: Remove temporary test container
+        if: always()
+        run: |
+          docker rm -f stakeout-smoke || true
+          docker volume rm stakeout-test-data || true
