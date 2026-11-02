@@ -44,6 +44,8 @@ The default database is `data/civic.sqlite3`. It is created automatically. Do no
 
 ## What is ready to use
 
+**Prospect discovery** combines bulk nonprofit inventory and website inspection with Stakeout's review workflow. Choose a first-website or rebuild campaign, discover organizations from IRS filings, include AI research candidates, or add sourced organizations yourself. Results show separate project-fit, backlink-opportunity and evidence-confidence scores, with source observations and retry controls. Optional DataForSEO search/backlink credentials and Open PageRank keys use the encrypted setup wizard. Paid checks require an explicit hunt budget. See [the discovery guide](docs/PROSPECT_DISCOVERY.md) for operation, scoring and limits.
+
 | Area | Implemented workflow |
 |---|---|
 | Overview | Real record counts, review queue, setup checklist, city coverage, audit history |

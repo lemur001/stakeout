@@ -30,6 +30,8 @@ from .research import SourceGateway,TOOL_DESCRIPTIONS,validate_run_token
 from .mail import build_email
 from .vault import IntegrationStore
 from .setup import Credentials, register_setup, session_response
+from .prospecting.models import HuntInput
+from .prospecting.service import Discovery
 
 
 class SecurityHeaders:
@@ -91,9 +93,11 @@ def create_app(config: Config | None=None) -> FastAPI:
     service=Service(db,config);auth=Auth(service);gateway=SourceGateway(service)
     store=IntegrationStore(service)
     worker=None
+    discovery_worker=None
+    discovery=Discovery(service)
     @asynccontextmanager
     async def lifespan(app):
-        nonlocal worker
+        nonlocal worker,discovery_worker
         db.migrate()
         store.load()
         store.verify_keys()
@@ -102,8 +106,11 @@ def create_app(config: Config | None=None) -> FastAPI:
         if config.run_worker:
             from .worker import Worker
             worker=Worker(service);worker.start()
+            from .prospecting.worker import DiscoveryWorker
+            discovery_worker=DiscoveryWorker(service);discovery_worker.start()
         yield
         if worker:worker.stop()
+        if discovery_worker:discovery_worker.stop()
     app=FastAPI(title='Stakeout Civic',version='1.0.0',lifespan=lifespan,docs_url=None,redoc_url=None,openapi_url=None)
     app.add_middleware(SizeLimit)
     app.state.service,app.state.auth,app.state.config=service,auth,config
@@ -196,6 +203,29 @@ def create_app(config: Config | None=None) -> FastAPI:
         response=JSONResponse({'ok':True});response.delete_cookie(SESSION_COOKIE,path='/');return response
     @app.get('/api/state')
     def state():return service.snapshot()
+    @app.get('/api/discovery')
+    def hunts():return discovery.list()
+    @app.get('/api/discovery-options')
+    def hunt_options():
+        from .prospecting.taxonomy import TYPE_LABEL
+        from .prospecting.providers import ESTIMATE_CENTS
+        return {'types':TYPE_LABEL,'estimates':ESTIMATE_CENTS}
+    @app.post('/api/discovery')
+    def new_hunt(data:HuntInput,request:Request):return discovery.create(data,actor(request))
+    @app.get('/api/discovery/{id}')
+    def hunt_detail(id:str):return discovery.detail(id)
+    @app.get('/api/discovery/{id}/export.csv')
+    def hunt_export(id:str):
+        return Response(discovery.export_csv(id),media_type='text/csv; charset=utf-8',headers={'Content-Disposition':f'attachment; filename="hunt-{id}.csv"'})
+    @app.post('/api/discovery/{id}/{action}')
+    def hunt_action(id:str,action:str,request:Request):return discovery.control(id,action,actor(request))
+    @app.get('/api/entities/{id}/discovery-evidence')
+    def discovery_evidence(id:str):
+        with db.transaction(False) as tx:
+            service.required(tx,'entities',id)
+            rows=tx.all('SELECT * FROM discovery_evidence WHERE entity_id=? ORDER BY observed_at DESC LIMIT 200',(id,))
+        for row in rows:row['observation']=loadj(row.pop('observation_json'),{})
+        return rows
     @app.post('/api/cities')
     def city(data: CityInput,request: Request):return service.create_city(data,actor(request))
     @app.post('/api/clients')

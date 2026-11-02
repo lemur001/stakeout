@@ -75,6 +75,9 @@ class Database:
                 if stmt.strip(): tx.execute(stmt)
             tx.execute('INSERT INTO schema_versions(version,applied_at) VALUES(1,?) ON CONFLICT(version) DO NOTHING',(iso(),))
             tx.execute('INSERT INTO schema_versions(version,applied_at) VALUES(2,?) ON CONFLICT(version) DO NOTHING',(iso(),))
+            columns={r['column_name'] for r in tx.all("SELECT column_name FROM information_schema.columns WHERE table_schema='civic' AND table_name='entities'")} if self.postgres else {r['name'] for r in tx.all('PRAGMA table_info(entities)')}
+            if 'campaign' not in columns:tx.execute("ALTER TABLE entities ADD COLUMN campaign TEXT NOT NULL DEFAULT 'first_website'")
+            tx.execute('INSERT INTO schema_versions(version,applied_at) VALUES(3,?) ON CONFLICT(version) DO NOTHING',(iso(),))
             if tx.setting('profile') is None:
                 tx.set_setting('profile',{'agency_name':'Stakeout Search','sender_name':'','sender_email':'','postal_address':''})
             if tx.setting('paused') is None: tx.set_setting('paused',True)

@@ -38,8 +38,9 @@ def main():
         with socket.socket() as sock:sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
         config=Config(mode='production',base_url=f'https://127.0.0.1:{port}',database_path=str(folder/'browser.sqlite3'),database_url='',
                       app_secret=secrets.token_urlsafe(48),encryption_key=base64.urlsafe_b64encode(secrets.token_bytes(32)).decode(),
-                      setup_token=secrets.token_urlsafe(48),admin_email='',admin_password='',run_worker=False,seed_on_start=True,allow_live_send=False)
-        server=uvicorn.Server(uvicorn.Config(create_app(config),host='127.0.0.1',port=port,access_log=False,log_level='error',
+                      setup_token=secrets.token_urlsafe(48),admin_email='',admin_password='',run_worker=False,seed_on_start=False,allow_live_send=False)
+        app=create_app(config)
+        server=uvicorn.Server(uvicorn.Config(app,host='127.0.0.1',port=port,access_log=False,log_level='error',
                                            ssl_certfile=str(folder/'cert.pem'),ssl_keyfile=str(folder/'key.pem')))
         thread=threading.Thread(target=server.run,daemon=True);thread.start()
         try:
@@ -80,6 +81,9 @@ def main():
                 page.get_by_label('Business postal address').fill('Synthetic test address')
                 page.get_by_role('button',name='Save and continue',exact=True).click()
                 page.get_by_label('Gemini API key',exact=True).fill('synthetic-gemini-key')
+                page.get_by_label('DataForSEO API login',exact=True).fill('synthetic-dataforseo-login')
+                page.get_by_label('DataForSEO API password',exact=True).fill('synthetic-dataforseo-password')
+                page.get_by_label('I confirmed permission to retrieve and retain the source content.').check()
                 page.get_by_role('button',name='Save and continue',exact=True).click()
                 page.get_by_label('SMTP hostname').fill('smtp.example.org')
                 page.get_by_label('SMTP username').fill('owner@example.org')
@@ -92,6 +96,8 @@ def main():
                 page.locator('#page').wait_for()
                 assert page.evaluate('localStorage.length===0 && sessionStorage.length===0')
                 page.reload();page.locator('#page').wait_for()
+                from browser_discovery import exercise_discovery
+                exercise_discovery(page,app.state.service,output)
                 # Use a fresh browser session: secure cookie and recovery-based login.
                 context.clear_cookies();page.reload()
                 page.get_by_label('Email address',exact=True).fill('owner@example.org')

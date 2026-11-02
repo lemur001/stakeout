@@ -78,8 +78,8 @@ def public_url(value: str, *, required: bool = False) -> str:
     except (ValueError,TypeError):
         raise DomainError('Use a public http(s) URL without credentials or a custom port.') from None
 
-def research_key(city_id: str, category: str, window: str) -> str:
-    return approval_hash({'city':city_id,'category':category,'window':window,'prompt':'civic-v1','source_policy':'mcp-only-v1'})
+def research_key(city_id: str, category: str, window: str, campaign: str='first_website') -> str:
+    return approval_hash({'city':city_id,'category':category,'window':window,'prompt':'civic-v2','source_policy':'mcp-only-v1','campaign':campaign})
 
 def add_business_days(dt: datetime, days: int, tz: str | None = None) -> datetime:
     local = dt.astimezone(ZoneInfo(tz)) if tz else dt
@@ -96,8 +96,11 @@ def fresh(value: str | None, now: datetime, days: int = 7) -> bool:
 def qualification_blockers(entity: dict, contact: dict | None, now: datetime | None = None) -> list[str]:
     now = now or utcnow()
     reasons = []
-    if entity.get('website_status') not in ELIGIBLE_WEBSITES:
+    eligible={'official_website_found','broken_or_parked','hosted_chapter_page_only'} if entity.get('campaign')=='rebuild' else ELIGIBLE_WEBSITES
+    if entity.get('website_status') not in eligible:
         reasons.append('Website status is not eligible')
+    if entity.get('campaign')=='rebuild' and not entity.get('website_url'):
+        reasons.append('A rebuild requires the existing website URL and an ownership review')
     if entity.get('state') in ('excluded','suppressed'):
         reasons.append('Organization is excluded or suppressed')
     if not fresh(entity.get('verified_at'),now):
