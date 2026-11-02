@@ -1,0 +1,1010 @@
+{
+  "schema_version": "1.0",
+  "prepared_on": "2026-10-02",
+  "purpose": "Unverified seed import for a proposed civic website sponsorship system. Not a send-ready list.",
+  "source": "Lakeland Entities Without Websites.md",
+  "source_handling": "Organization names and email spellings are preserved from the supplied report. Residential addresses and phone numbers have deliberately not been imported. No inferred email corrections are applied.",
+  "limitations": "Only the Citrus Center Kiwanis official website is independently verified in this seed. Other website, activity, historical-status, contact-role, and mailbox claims require verification. Shared contact addresses do not identify a single organization.",
+  "statistics": {
+    "entities": 23,
+    "unique_email_endpoints": 17,
+    "contact_routes": {
+      "direct_email_in_report": 10,
+      "shared_municipal_liaison": 6,
+      "no_direct_email_in_report": 7
+    },
+    "send_enabled_entities": 0
+  },
+  "entities": [
+    {
+      "id": "seed_dfaae53bf5276ce8",
+      "city_key": "US:FL:Lakeland",
+      "name_as_reported": "Camphor Heights Neighborhood Association",
+      "report_category": "neighborhood_association",
+      "report_source": {
+        "filename": "Lakeland Entities Without Websites.md",
+        "line_start": 24,
+        "line_end": 24
+      },
+      "initial_contact_route": "direct_email_in_report",
+      "website_status": "unknown",
+      "qualification_state": "unverified_import",
+      "historical_qualification": "unverified",
+      "current_activity_status": "unverified",
+      "client_id": null,
+      "send_enabled": false,
+      "block_reasons": [
+        "historical_or_civic_scope_not_independently_verified",
+        "current_activity_not_independently_verified",
+        "sponsor_not_assigned",
+        "outreach_not_approved",
+        "website_status_not_independently_verified",
+        "contact_role_and_mailbox_unverified"
+      ],
+      "independent_verification": []
+    },
+    {
+      "id": "seed_14543153c3479e38",
+      "city_key": "US:FL:Lakeland",
+      "name_as_reported": "Webster Park South Neighborhood Association",
+      "report_category": "neighborhood_association",
+      "report_source": {
+        "filename": "Lakeland Entities Without Websites.md",
+        "line_start": 25,
+        "line_end": 25
+      },
+      "initial_contact_route": "shared_municipal_liaison",
+      "website_status": "unknown",
+      "qualification_state": "unverified_import",
+      "historical_qualification": "unverified",
+      "current_activity_status": "unverified",
+      "client_id": null,
+      "send_enabled": false,
+      "block_reasons": [
+        "historical_or_civic_scope_not_independently_verified",
+        "current_activity_not_independently_verified",
+        "sponsor_not_assigned",
+        "outreach_not_approved",
+        "website_status_not_independently_verified",
+        "shared_liaison_requires_one_consolidated_introduction"
+      ],
+      "independent_verification": []
+    },
+    {
+      "id": "seed_54dc412985a742d3",
+      "city_key": "US:FL:Lakeland",
+      "name_as_reported": "Orangewood Neighborhood Association",
+      "report_category": "neighborhood_association",
+      "report_source": {
+        "filename": "Lakeland Entities Without Websites.md",
+        "line_start": 26,
+        "line_end": 26
+      },
+      "initial_contact_route": "shared_municipal_liaison",
+      "website_status": "unknown",
+      "qualification_state": "unverified_import",
+      "historical_qualification": "unverified",
+      "current_activity_status": "unverified",
+      "client_id": null,
+      "send_enabled": false,
+      "block_reasons": [
+        "historical_or_civic_scope_not_independently_verified",
+        "current_activity_not_independently_verified",
+        "sponsor_not_assigned",
+        "outreach_not_approved",
+        "website_status_not_independently_verified",
+        "shared_liaison_requires_one_consolidated_introduction"
+      ],
+      "independent_verification": []
+    },
+    {
+      "id": "seed_0b078bb1c8df6c88",
+      "city_key": "US:FL:Lakeland",
+      "name_as_reported": "Paul A. Diggs Neighborhood Association",
+      "report_category": "neighborhood_association",
+      "report_source": {
+        "filename": "Lakeland Entities Without Websites.md",
+        "line_start": 27,
+        "line_end": 27
+      },
+      "initial_contact_route": "shared_municipal_liaison",
+      "website_status": "unknown",
+      "qualification_state": "unverified_import",
+      "historical_qualification": "unverified",
+      "current_activity_status": "unverified",
+      "client_id": null,
+      "send_enabled": false,
+      "block_reasons": [
+        "historical_or_civic_scope_not_independently_verified",
+        "current_activity_not_independently_verified",
+        "sponsor_not_assigned",
+        "outreach_not_approved",
+        "website_status_not_independently_verified",
+        "shared_liaison_requires_one_consolidated_introduction"
+      ],
+      "independent_verification": []
+    },
+    {
+      "id": "seed_5ead5ae28fdaee91",
+      "city_key": "US:FL:Lakeland",
+      "name_as_reported": "Gladys Leggett Neighborhood Association",
+      "report_category": "neighborhood_association",
+      "report_source": {
+        "filename": "Lakeland Entities Without Websites.md",
+        "line_start": 28,
+        "line_end": 28
+      },
+      "initial_contact_route": "shared_municipal_liaison",
+      "website_status": "unknown",
+      "qualification_state": "unverified_import",
+      "historical_qualification": "unverified",
+      "current_activity_status": "unverified",
+      "client_id": null,
+      "send_enabled": false,
+      "block_reasons": [
+        "historical_or_civic_scope_not_independently_verified",
+        "current_activity_not_independently_verified",
+        "sponsor_not_assigned",
+        "outreach_not_approved",
+        "website_status_not_independently_verified",
+        "shared_liaison_requires_one_consolidated_introduction"
+      ],
+      "independent_verification": []
+    },
+    {
+      "id": "seed_5387f80a124e3ea9",
+      "city_key": "US:FL:Lakeland",
+      "name_as_reported": "Lime Street Neighborhood Association",
+      "report_category": "neighborhood_association",
+      "report_source": {
+        "filename": "Lakeland Entities Without Websites.md",
+        "line_start": 29,
+        "line_end": 29
+      },
+      "initial_contact_route": "shared_municipal_liaison",
+      "website_status": "unknown",
+      "qualification_state": "unverified_import",
+      "historical_qualification": "unverified",
+      "current_activity_status": "unverified",
+      "client_id": null,
+      "send_enabled": false,
+      "block_reasons": [
+        "historical_or_civic_scope_not_independently_verified",
+        "current_activity_not_independently_verified",
+        "sponsor_not_assigned",
+        "outreach_not_approved",
+        "website_status_not_independently_verified",
+        "shared_liaison_requires_one_consolidated_introduction"
+      ],
+      "independent_verification": []
+    },
+    {
+      "id": "seed_88e9fb1faef6757e",
+      "city_key": "US:FL:Lakeland",
+      "name_as_reported": "Lakeshore Neighborhood Association",
+      "report_category": "neighborhood_association",
+      "report_source": {
+        "filename": "Lakeland Entities Without Websites.md",
+        "line_start": 30,
+        "line_end": 30
+      },
+      "initial_contact_route": "shared_municipal_liaison",
+      "website_status": "unknown",
+      "qualification_state": "unverified_import",
+      "historical_qualification": "unverified",
+      "current_activity_status": "unverified",
+      "client_id": null,
+      "send_enabled": false,
+      "block_reasons": [
+        "historical_or_civic_scope_not_independently_verified",
+        "current_activity_not_independently_verified",
+        "sponsor_not_assigned",
+        "outreach_not_approved",
+        "website_status_not_independently_verified",
+        "shared_liaison_requires_one_consolidated_introduction"
+      ],
+      "independent_verification": []
+    },
+    {
+      "id": "seed_06f64d91a54c52bb",
+      "city_key": "US:FL:Lakeland",
+      "name_as_reported": "The Sertoma Club Lakeland",
+      "report_category": "legacy_civic_club",
+      "report_source": {
+        "filename": "Lakeland Entities Without Websites.md",
+        "line_start": 49,
+        "line_end": 49
+      },
+      "initial_contact_route": "direct_email_in_report",
+      "website_status": "unknown",
+      "qualification_state": "unverified_import",
+      "historical_qualification": "unverified",
+      "current_activity_status": "unverified",
+      "client_id": null,
+      "send_enabled": false,
+      "block_reasons": [
+        "historical_or_civic_scope_not_independently_verified",
+        "current_activity_not_independently_verified",
+        "sponsor_not_assigned",
+        "outreach_not_approved",
+        "website_status_not_independently_verified",
+        "contact_role_and_mailbox_unverified"
+      ],
+      "independent_verification": []
+    },
+    {
+      "id": "seed_091bbd7f8842cb8d",
+      "city_key": "US:FL:Lakeland",
+      "name_as_reported": "Lakeland Dixieland Lions Club",
+      "report_category": "legacy_civic_club",
+      "report_source": {
+        "filename": "Lakeland Entities Without Websites.md",
+        "line_start": 50,
+        "line_end": 50
+      },
+      "initial_contact_route": "direct_email_in_report",
+      "website_status": "unknown",
+      "qualification_state": "unverified_import",
+      "historical_qualification": "unverified",
+      "current_activity_status": "unverified",
+      "client_id": null,
+      "send_enabled": false,
+      "block_reasons": [
+        "historical_or_civic_scope_not_independently_verified",
+        "current_activity_not_independently_verified",
+        "sponsor_not_assigned",
+        "outreach_not_approved",
+        "website_status_not_independently_verified",
+        "contact_role_and_mailbox_unverified"
+      ],
+      "independent_verification": []
+    },
+    {
+      "id": "seed_0af7ad8f3266b380",
+      "city_key": "US:FL:Lakeland",
+      "name_as_reported": "Rotary Club of Lakeland North",
+      "report_category": "legacy_civic_club",
+      "report_source": {
+        "filename": "Lakeland Entities Without Websites.md",
+        "line_start": 51,
+        "line_end": 51
+      },
+      "initial_contact_route": "direct_email_in_report",
+      "website_status": "unknown",
+      "qualification_state": "unverified_import",
+      "historical_qualification": "unverified",
+      "current_activity_status": "unverified",
+      "client_id": null,
+      "send_enabled": false,
+      "block_reasons": [
+        "historical_or_civic_scope_not_independently_verified",
+        "current_activity_not_independently_verified",
+        "sponsor_not_assigned",
+        "outreach_not_approved",
+        "website_status_not_independently_verified",
+        "contact_role_and_mailbox_unverified"
+      ],
+      "independent_verification": []
+    },
+    {
+      "id": "seed_6c9dd5cd98a40c1d",
+      "city_key": "US:FL:Lakeland",
+      "name_as_reported": "Lakeland South Rotary",
+      "report_category": "legacy_civic_club",
+      "report_source": {
+        "filename": "Lakeland Entities Without Websites.md",
+        "line_start": 52,
+        "line_end": 52
+      },
+      "initial_contact_route": "direct_email_in_report",
+      "website_status": "unknown",
+      "qualification_state": "unverified_import",
+      "historical_qualification": "unverified",
+      "current_activity_status": "unverified",
+      "client_id": null,
+      "send_enabled": false,
+      "block_reasons": [
+        "historical_or_civic_scope_not_independently_verified",
+        "current_activity_not_independently_verified",
+        "sponsor_not_assigned",
+        "outreach_not_approved",
+        "website_status_not_independently_verified",
+        "contact_role_and_mailbox_unverified"
+      ],
+      "independent_verification": []
+    },
+    {
+      "id": "seed_e2e43f1976987b28",
+      "city_key": "US:FL:Lakeland",
+      "name_as_reported": "Lakeland Christina Rotary",
+      "report_category": "legacy_civic_club",
+      "report_source": {
+        "filename": "Lakeland Entities Without Websites.md",
+        "line_start": 53,
+        "line_end": 53
+      },
+      "initial_contact_route": "direct_email_in_report",
+      "website_status": "unknown",
+      "qualification_state": "unverified_import",
+      "historical_qualification": "unverified",
+      "current_activity_status": "unverified",
+      "client_id": null,
+      "send_enabled": false,
+      "block_reasons": [
+        "historical_or_civic_scope_not_independently_verified",
+        "current_activity_not_independently_verified",
+        "sponsor_not_assigned",
+        "outreach_not_approved",
+        "website_status_not_independently_verified",
+        "contact_role_and_mailbox_unverified"
+      ],
+      "independent_verification": []
+    },
+    {
+      "id": "seed_b5c1b6f462593f0b",
+      "city_key": "US:FL:Lakeland",
+      "name_as_reported": "Rotary Club of Lakeland Tigertown",
+      "report_category": "legacy_civic_club",
+      "report_source": {
+        "filename": "Lakeland Entities Without Websites.md",
+        "line_start": 54,
+        "line_end": 54
+      },
+      "initial_contact_route": "direct_email_in_report",
+      "website_status": "unknown",
+      "qualification_state": "unverified_import",
+      "historical_qualification": "unverified",
+      "current_activity_status": "unverified",
+      "client_id": null,
+      "send_enabled": false,
+      "block_reasons": [
+        "historical_or_civic_scope_not_independently_verified",
+        "current_activity_not_independently_verified",
+        "sponsor_not_assigned",
+        "outreach_not_approved",
+        "website_status_not_independently_verified",
+        "contact_role_and_mailbox_unverified"
+      ],
+      "independent_verification": []
+    },
+    {
+      "id": "seed_371f272960a38ba3",
+      "city_key": "US:FL:Lakeland",
+      "name_as_reported": "North Lakeland Kiwanis Club",
+      "report_category": "legacy_civic_club",
+      "report_source": {
+        "filename": "Lakeland Entities Without Websites.md",
+        "line_start": 55,
+        "line_end": 55
+      },
+      "initial_contact_route": "direct_email_in_report",
+      "website_status": "unknown",
+      "qualification_state": "unverified_import",
+      "historical_qualification": "unverified",
+      "current_activity_status": "unverified",
+      "client_id": null,
+      "send_enabled": false,
+      "block_reasons": [
+        "historical_or_civic_scope_not_independently_verified",
+        "current_activity_not_independently_verified",
+        "sponsor_not_assigned",
+        "outreach_not_approved",
+        "website_status_not_independently_verified",
+        "contact_role_and_mailbox_unverified"
+      ],
+      "independent_verification": []
+    },
+    {
+      "id": "seed_10dc10535a956671",
+      "city_key": "US:FL:Lakeland",
+      "name_as_reported": "Citrus Center Kiwanis",
+      "report_category": "legacy_civic_club",
+      "report_source": {
+        "filename": "Lakeland Entities Without Websites.md",
+        "line_start": 56,
+        "line_end": 56
+      },
+      "initial_contact_route": "direct_email_in_report",
+      "website_status": "official_website_found",
+      "qualification_state": "excluded_existing_website",
+      "historical_qualification": "unverified",
+      "current_activity_status": "unverified",
+      "client_id": null,
+      "send_enabled": false,
+      "block_reasons": [
+        "historical_or_civic_scope_not_independently_verified",
+        "current_activity_not_independently_verified",
+        "sponsor_not_assigned",
+        "outreach_not_approved",
+        "official_website_found_exclude_from_no_website_campaign",
+        "contact_role_and_mailbox_unverified"
+      ],
+      "independent_verification": [
+        {
+          "field": "website_status",
+          "value": "official_website_found",
+          "source_url": "https://citruscenterkiwanis.org/",
+          "checked_on": "2026-10-02",
+          "observation": "Official club site identifies Citrus Center Kiwanis, a Lakeland mailing address, club activities, and contact navigation."
+        }
+      ]
+    },
+    {
+      "id": "seed_e42f02f408847eb7",
+      "city_key": "US:FL:Lakeland",
+      "name_as_reported": "Club Hispano de Lakeland",
+      "report_category": "cultural_veteran_or_specialized_organization",
+      "report_source": {
+        "filename": "Lakeland Entities Without Websites.md",
+        "line_start": 75,
+        "line_end": 75
+      },
+      "initial_contact_route": "direct_email_in_report",
+      "website_status": "unknown",
+      "qualification_state": "unverified_import",
+      "historical_qualification": "unverified",
+      "current_activity_status": "unverified",
+      "client_id": null,
+      "send_enabled": false,
+      "block_reasons": [
+        "historical_or_civic_scope_not_independently_verified",
+        "current_activity_not_independently_verified",
+        "sponsor_not_assigned",
+        "outreach_not_approved",
+        "website_status_not_independently_verified",
+        "contact_role_and_mailbox_unverified"
+      ],
+      "independent_verification": []
+    },
+    {
+      "id": "seed_71311baf79fc7f60",
+      "city_key": "US:FL:Lakeland",
+      "name_as_reported": "VFW Post 2297",
+      "report_category": "cultural_veteran_or_specialized_organization",
+      "report_source": {
+        "filename": "Lakeland Entities Without Websites.md",
+        "line_start": 76,
+        "line_end": 76
+      },
+      "initial_contact_route": "no_direct_email_in_report",
+      "website_status": "unknown",
+      "qualification_state": "unverified_import",
+      "historical_qualification": "unverified",
+      "current_activity_status": "unverified",
+      "client_id": null,
+      "send_enabled": false,
+      "block_reasons": [
+        "historical_or_civic_scope_not_independently_verified",
+        "current_activity_not_independently_verified",
+        "sponsor_not_assigned",
+        "outreach_not_approved",
+        "website_status_not_independently_verified",
+        "no_direct_email_in_report"
+      ],
+      "independent_verification": []
+    },
+    {
+      "id": "seed_e339deb247a9b2ab",
+      "city_key": "US:FL:Lakeland",
+      "name_as_reported": "Lakeland Garden Club",
+      "report_category": "cultural_veteran_or_specialized_organization",
+      "report_source": {
+        "filename": "Lakeland Entities Without Websites.md",
+        "line_start": 77,
+        "line_end": 77
+      },
+      "initial_contact_route": "no_direct_email_in_report",
+      "website_status": "unknown",
+      "qualification_state": "unverified_import",
+      "historical_qualification": "unverified",
+      "current_activity_status": "unverified",
+      "client_id": null,
+      "send_enabled": false,
+      "block_reasons": [
+        "historical_or_civic_scope_not_independently_verified",
+        "current_activity_not_independently_verified",
+        "sponsor_not_assigned",
+        "outreach_not_approved",
+        "website_status_not_independently_verified",
+        "no_direct_email_in_report"
+      ],
+      "independent_verification": []
+    },
+    {
+      "id": "seed_5ccf375f95921e8e",
+      "city_key": "US:FL:Lakeland",
+      "name_as_reported": "Pastoras Y Pastores Sin Fronteras Y Sin Limites Inc",
+      "report_category": "cultural_veteran_or_specialized_organization",
+      "report_source": {
+        "filename": "Lakeland Entities Without Websites.md",
+        "line_start": 78,
+        "line_end": 78
+      },
+      "initial_contact_route": "no_direct_email_in_report",
+      "website_status": "unknown",
+      "qualification_state": "unverified_import",
+      "historical_qualification": "unverified",
+      "current_activity_status": "unverified",
+      "client_id": null,
+      "send_enabled": false,
+      "block_reasons": [
+        "historical_or_civic_scope_not_independently_verified",
+        "current_activity_not_independently_verified",
+        "sponsor_not_assigned",
+        "outreach_not_approved",
+        "website_status_not_independently_verified",
+        "no_direct_email_in_report"
+      ],
+      "independent_verification": []
+    },
+    {
+      "id": "seed_424253dce5120401",
+      "city_key": "US:FL:Lakeland",
+      "name_as_reported": "Keepers Group Inc. (Keepers of the Green)",
+      "report_category": "cultural_veteran_or_specialized_organization",
+      "report_source": {
+        "filename": "Lakeland Entities Without Websites.md",
+        "line_start": 79,
+        "line_end": 79
+      },
+      "initial_contact_route": "no_direct_email_in_report",
+      "website_status": "unknown",
+      "qualification_state": "unverified_import",
+      "historical_qualification": "unverified",
+      "current_activity_status": "unverified",
+      "client_id": null,
+      "send_enabled": false,
+      "block_reasons": [
+        "historical_or_civic_scope_not_independently_verified",
+        "current_activity_not_independently_verified",
+        "sponsor_not_assigned",
+        "outreach_not_approved",
+        "website_status_not_independently_verified",
+        "no_direct_email_in_report"
+      ],
+      "independent_verification": []
+    },
+    {
+      "id": "seed_1364f64d717fa981",
+      "city_key": "US:FL:Lakeland",
+      "name_as_reported": "Sisters in Christ Mentoring Ministry, Inc.",
+      "report_category": "cultural_veteran_or_specialized_organization",
+      "report_source": {
+        "filename": "Lakeland Entities Without Websites.md",
+        "line_start": 80,
+        "line_end": 80
+      },
+      "initial_contact_route": "no_direct_email_in_report",
+      "website_status": "unknown",
+      "qualification_state": "unverified_import",
+      "historical_qualification": "unverified",
+      "current_activity_status": "unverified",
+      "client_id": null,
+      "send_enabled": false,
+      "block_reasons": [
+        "historical_or_civic_scope_not_independently_verified",
+        "current_activity_not_independently_verified",
+        "sponsor_not_assigned",
+        "outreach_not_approved",
+        "website_status_not_independently_verified",
+        "no_direct_email_in_report"
+      ],
+      "independent_verification": []
+    },
+    {
+      "id": "seed_01011b35f27fcebc",
+      "city_key": "US:FL:Lakeland",
+      "name_as_reported": "Discover The Truth Ministry, Inc.",
+      "report_category": "cultural_veteran_or_specialized_organization",
+      "report_source": {
+        "filename": "Lakeland Entities Without Websites.md",
+        "line_start": 81,
+        "line_end": 81
+      },
+      "initial_contact_route": "no_direct_email_in_report",
+      "website_status": "unknown",
+      "qualification_state": "unverified_import",
+      "historical_qualification": "unverified",
+      "current_activity_status": "unverified",
+      "client_id": null,
+      "send_enabled": false,
+      "block_reasons": [
+        "historical_or_civic_scope_not_independently_verified",
+        "current_activity_not_independently_verified",
+        "sponsor_not_assigned",
+        "outreach_not_approved",
+        "website_status_not_independently_verified",
+        "no_direct_email_in_report"
+      ],
+      "independent_verification": []
+    },
+    {
+      "id": "seed_4f924b22798e78f2",
+      "city_key": "US:FL:Lakeland",
+      "name_as_reported": "Clark Lake South Association, Inc.",
+      "report_category": "cultural_veteran_or_specialized_organization",
+      "report_source": {
+        "filename": "Lakeland Entities Without Websites.md",
+        "line_start": 82,
+        "line_end": 82
+      },
+      "initial_contact_route": "no_direct_email_in_report",
+      "website_status": "unknown",
+      "qualification_state": "unverified_import",
+      "historical_qualification": "unverified",
+      "current_activity_status": "unverified",
+      "client_id": null,
+      "send_enabled": false,
+      "block_reasons": [
+        "historical_or_civic_scope_not_independently_verified",
+        "current_activity_not_independently_verified",
+        "sponsor_not_assigned",
+        "outreach_not_approved",
+        "website_status_not_independently_verified",
+        "no_direct_email_in_report"
+      ],
+      "independent_verification": []
+    }
+  ],
+  "contact_endpoints": [
+    {
+      "id": "endpoint_ee6bb3351d784b0d",
+      "email_as_reported": "chna1917@gmail.com",
+      "email_dedupe_key": "chna1917@gmail.com",
+      "role": "organization_contact_claimed_by_report",
+      "is_shared_endpoint": false,
+      "source_status": "user_supplied_report_only",
+      "role_verification": "unverified",
+      "mailbox_verification": "unverified",
+      "send_enabled": false,
+      "source_lines": [
+        24
+      ]
+    },
+    {
+      "id": "endpoint_be5ff91ad484434f",
+      "email_as_reported": "DI8604@gmail.com",
+      "email_dedupe_key": "di8604@gmail.com",
+      "role": "organization_contact_claimed_by_report",
+      "is_shared_endpoint": false,
+      "source_status": "user_supplied_report_only",
+      "role_verification": "unverified",
+      "mailbox_verification": "unverified",
+      "send_enabled": false,
+      "source_lines": [
+        24
+      ]
+    },
+    {
+      "id": "endpoint_182f44f311176057",
+      "email_as_reported": "NeighborhoodOutreach@lakelandgov.net",
+      "email_dedupe_key": "neighborhoodoutreach@lakelandgov.net",
+      "role": "municipal_liaison",
+      "is_shared_endpoint": true,
+      "source_status": "user_supplied_report_only",
+      "role_verification": "unverified",
+      "mailbox_verification": "unverified",
+      "send_enabled": false,
+      "source_lines": [
+        25,
+        26,
+        27,
+        28,
+        29,
+        30
+      ]
+    },
+    {
+      "id": "endpoint_1a672fdad2c3b55a",
+      "email_as_reported": "charleslake@hotmail.com",
+      "email_dedupe_key": "charleslake@hotmail.com",
+      "role": "organization_contact_claimed_by_report",
+      "is_shared_endpoint": false,
+      "source_status": "user_supplied_report_only",
+      "role_verification": "unverified",
+      "mailbox_verification": "unverified",
+      "send_enabled": false,
+      "source_lines": [
+        49
+      ]
+    },
+    {
+      "id": "endpoint_25f2d1e06a4d4bcb",
+      "email_as_reported": "rperry@bgclm.org",
+      "email_dedupe_key": "rperry@bgclm.org",
+      "role": "organization_contact_claimed_by_report",
+      "is_shared_endpoint": false,
+      "source_status": "user_supplied_report_only",
+      "role_verification": "unverified",
+      "mailbox_verification": "unverified",
+      "send_enabled": false,
+      "source_lines": [
+        49
+      ]
+    },
+    {
+      "id": "endpoint_5660548228e407fd",
+      "email_as_reported": "Helmold1924@gmail.com",
+      "email_dedupe_key": "helmold1924@gmail.com",
+      "role": "organization_contact_claimed_by_report",
+      "is_shared_endpoint": false,
+      "source_status": "user_supplied_report_only",
+      "role_verification": "unverified",
+      "mailbox_verification": "unverified",
+      "send_enabled": false,
+      "source_lines": [
+        50
+      ]
+    },
+    {
+      "id": "endpoint_cbb8c59f2cb08d7e",
+      "email_as_reported": "Jose@insurewithbarfield.com",
+      "email_dedupe_key": "jose@insurewithbarfield.com",
+      "role": "organization_contact_claimed_by_report",
+      "is_shared_endpoint": false,
+      "source_status": "user_supplied_report_only",
+      "role_verification": "unverified",
+      "mailbox_verification": "unverified",
+      "send_enabled": false,
+      "source_lines": [
+        51
+      ]
+    },
+    {
+      "id": "endpoint_941b5241911f673a",
+      "email_as_reported": "Kevin.McWilliams@ampf.com",
+      "email_dedupe_key": "kevin.mcwilliams@ampf.com",
+      "role": "organization_contact_claimed_by_report",
+      "is_shared_endpoint": false,
+      "source_status": "user_supplied_report_only",
+      "role_verification": "unverified",
+      "mailbox_verification": "unverified",
+      "send_enabled": false,
+      "source_lines": [
+        52
+      ]
+    },
+    {
+      "id": "endpoint_c1ddc616b15b5b53",
+      "email_as_reported": "mm179w@att.com",
+      "email_dedupe_key": "mm179w@att.com",
+      "role": "organization_contact_claimed_by_report",
+      "is_shared_endpoint": false,
+      "source_status": "user_supplied_report_only",
+      "role_verification": "unverified",
+      "mailbox_verification": "unverified",
+      "send_enabled": false,
+      "source_lines": [
+        52
+      ]
+    },
+    {
+      "id": "endpoint_93578c6f45ecc4f0",
+      "email_as_reported": "LeeEEarls@gmail.com",
+      "email_dedupe_key": "leeeearls@gmail.com",
+      "role": "organization_contact_claimed_by_report",
+      "is_shared_endpoint": false,
+      "source_status": "user_supplied_report_only",
+      "role_verification": "unverified",
+      "mailbox_verification": "unverified",
+      "send_enabled": false,
+      "source_lines": [
+        52
+      ]
+    },
+    {
+      "id": "endpoint_0121644595fbae6b",
+      "email_as_reported": "jane.hammond@elderpoint.org",
+      "email_dedupe_key": "jane.hammond@elderpoint.org",
+      "role": "organization_contact_claimed_by_report",
+      "is_shared_endpoint": false,
+      "source_status": "user_supplied_report_only",
+      "role_verification": "unverified",
+      "mailbox_verification": "unverified",
+      "send_enabled": false,
+      "source_lines": [
+        53
+      ]
+    },
+    {
+      "id": "endpoint_35ce21ab19c1a84e",
+      "email_as_reported": "Zach.burek@tigers.com",
+      "email_dedupe_key": "zach.burek@tigers.com",
+      "role": "organization_contact_claimed_by_report",
+      "is_shared_endpoint": false,
+      "source_status": "user_supplied_report_only",
+      "role_verification": "unverified",
+      "mailbox_verification": "unverified",
+      "send_enabled": false,
+      "source_lines": [
+        54
+      ]
+    },
+    {
+      "id": "endpoint_e51b44858333ac1d",
+      "email_as_reported": "egolotko@walltitus.com",
+      "email_dedupe_key": "egolotko@walltitus.com",
+      "role": "organization_contact_claimed_by_report",
+      "is_shared_endpoint": false,
+      "source_status": "user_supplied_report_only",
+      "role_verification": "unverified",
+      "mailbox_verification": "unverified",
+      "send_enabled": false,
+      "source_lines": [
+        54
+      ]
+    },
+    {
+      "id": "endpoint_c0940ab2d500cb0b",
+      "email_as_reported": "tresinc@aol.com",
+      "email_dedupe_key": "tresinc@aol.com",
+      "role": "organization_contact_claimed_by_report",
+      "is_shared_endpoint": false,
+      "source_status": "user_supplied_report_only",
+      "role_verification": "unverified",
+      "mailbox_verification": "unverified",
+      "send_enabled": false,
+      "source_lines": [
+        55
+      ]
+    },
+    {
+      "id": "endpoint_0b986ef4bcaf53b5",
+      "email_as_reported": "Kathryn.koch@lanierupshaw.com",
+      "email_dedupe_key": "kathryn.koch@lanierupshaw.com",
+      "role": "organization_contact_claimed_by_report",
+      "is_shared_endpoint": false,
+      "source_status": "user_supplied_report_only",
+      "role_verification": "unverified",
+      "mailbox_verification": "unverified",
+      "send_enabled": false,
+      "source_lines": [
+        56
+      ]
+    },
+    {
+      "id": "endpoint_5296affa1a834782",
+      "email_as_reported": "miwe55@earthlink.net",
+      "email_dedupe_key": "miwe55@earthlink.net",
+      "role": "organization_contact_claimed_by_report",
+      "is_shared_endpoint": false,
+      "source_status": "user_supplied_report_only",
+      "role_verification": "unverified",
+      "mailbox_verification": "unverified",
+      "send_enabled": false,
+      "source_lines": [
+        56
+      ]
+    },
+    {
+      "id": "endpoint_48efea6e4f0644ec",
+      "email_as_reported": "HispanicClubofLakeland@yahoo.com",
+      "email_dedupe_key": "hispaniccluboflakeland@yahoo.com",
+      "role": "organization_contact_claimed_by_report",
+      "is_shared_endpoint": false,
+      "source_status": "user_supplied_report_only",
+      "role_verification": "unverified",
+      "mailbox_verification": "unverified",
+      "send_enabled": false,
+      "source_lines": [
+        75
+      ]
+    }
+  ],
+  "entity_contact_relationships": [
+    {
+      "entity_id": "seed_dfaae53bf5276ce8",
+      "contact_id": "endpoint_ee6bb3351d784b0d",
+      "relationship": "reported_direct_contact"
+    },
+    {
+      "entity_id": "seed_dfaae53bf5276ce8",
+      "contact_id": "endpoint_be5ff91ad484434f",
+      "relationship": "reported_direct_contact"
+    },
+    {
+      "entity_id": "seed_14543153c3479e38",
+      "contact_id": "endpoint_182f44f311176057",
+      "relationship": "introduction_route"
+    },
+    {
+      "entity_id": "seed_54dc412985a742d3",
+      "contact_id": "endpoint_182f44f311176057",
+      "relationship": "introduction_route"
+    },
+    {
+      "entity_id": "seed_0b078bb1c8df6c88",
+      "contact_id": "endpoint_182f44f311176057",
+      "relationship": "introduction_route"
+    },
+    {
+      "entity_id": "seed_5ead5ae28fdaee91",
+      "contact_id": "endpoint_182f44f311176057",
+      "relationship": "introduction_route"
+    },
+    {
+      "entity_id": "seed_5387f80a124e3ea9",
+      "contact_id": "endpoint_182f44f311176057",
+      "relationship": "introduction_route"
+    },
+    {
+      "entity_id": "seed_88e9fb1faef6757e",
+      "contact_id": "endpoint_182f44f311176057",
+      "relationship": "introduction_route"
+    },
+    {
+      "entity_id": "seed_06f64d91a54c52bb",
+      "contact_id": "endpoint_1a672fdad2c3b55a",
+      "relationship": "reported_direct_contact"
+    },
+    {
+      "entity_id": "seed_06f64d91a54c52bb",
+      "contact_id": "endpoint_25f2d1e06a4d4bcb",
+      "relationship": "reported_direct_contact"
+    },
+    {
+      "entity_id": "seed_091bbd7f8842cb8d",
+      "contact_id": "endpoint_5660548228e407fd",
+      "relationship": "reported_direct_contact"
+    },
+    {
+      "entity_id": "seed_0af7ad8f3266b380",
+      "contact_id": "endpoint_cbb8c59f2cb08d7e",
+      "relationship": "reported_direct_contact"
+    },
+    {
+      "entity_id": "seed_6c9dd5cd98a40c1d",
+      "contact_id": "endpoint_941b5241911f673a",
+      "relationship": "reported_direct_contact"
+    },
+    {
+      "entity_id": "seed_6c9dd5cd98a40c1d",
+      "contact_id": "endpoint_c1ddc616b15b5b53",
+      "relationship": "reported_direct_contact"
+    },
+    {
+      "entity_id": "seed_6c9dd5cd98a40c1d",
+      "contact_id": "endpoint_93578c6f45ecc4f0",
+      "relationship": "reported_direct_contact"
+    },
+    {
+      "entity_id": "seed_e2e43f1976987b28",
+      "contact_id": "endpoint_0121644595fbae6b",
+      "relationship": "reported_direct_contact"
+    },
+    {
+      "entity_id": "seed_b5c1b6f462593f0b",
+      "contact_id": "endpoint_35ce21ab19c1a84e",
+      "relationship": "reported_direct_contact"
+    },
+    {
+      "entity_id": "seed_b5c1b6f462593f0b",
+      "contact_id": "endpoint_e51b44858333ac1d",
+      "relationship": "reported_direct_contact"
+    },
+    {
+      "entity_id": "seed_371f272960a38ba3",
+      "contact_id": "endpoint_c0940ab2d500cb0b",
+      "relationship": "reported_direct_contact"
+    },
+    {
+      "entity_id": "seed_10dc10535a956671",
+      "contact_id": "endpoint_0b986ef4bcaf53b5",
+      "relationship": "reported_direct_contact"
+    },
+    {
+      "entity_id": "seed_10dc10535a956671",
+      "contact_id": "endpoint_5296affa1a834782",
+      "relationship": "reported_direct_contact"
+    },
+    {
+      "entity_id": "seed_e42f02f408847eb7",
+      "contact_id": "endpoint_48efea6e4f0644ec",
+      "relationship": "reported_direct_contact"
+    }
+  ],
+  "production_reuse_review": {
+    "source_permissions_status": "not_reviewed_for_production_reuse",
+    "usage_boundary": "User-supplied report normalized for review; not an authorized production mailing list. Review source rights before production ingestion or reuse."
+  }
+}
