@@ -17,6 +17,27 @@ from email.parser import BytesParser
 from email.utils import formataddr, format_datetime, getaddresses
 from .core import DomainError, email_key, iso, utcnow, parse_time
 from .models import IncomingEvent
+from .network import public_socket
+
+
+class PublicSMTP(smtplib.SMTP):
+    def _get_socket(self,host,port,timeout):return public_socket(host,port,timeout)
+
+
+class PublicSMTPSSL(smtplib.SMTP_SSL):
+    def _get_socket(self,host,port,timeout):
+        sock=public_socket(host,port,timeout)
+        try:return self.context.wrap_socket(sock,server_hostname=self._host)
+        except Exception:
+            sock.close();raise
+
+
+class PublicIMAPSSL(imaplib.IMAP4_SSL):
+    def _create_socket(self,timeout):
+        sock=public_socket(self.host,self.port,timeout)
+        try:return self.ssl_context.wrap_socket(sock,server_hostname=self.host)
+        except Exception:
+            sock.close();raise
 
 OPTOUT=re.compile(r'\b(unsubscribe|remove me|stop (?:emailing|contacting|sending)|no thanks|not interested|do not (?:contact|email))\b',re.I)
 
@@ -49,7 +70,7 @@ class SMTPProvider:
         cfg=self.config
         issues=cfg.email_readiness()
         if issues:raise DomainError('Live sending is disabled.',409,issues)
-        cls=smtplib.SMTP_SSL if cfg.smtp_ssl else smtplib.SMTP
+        cls=PublicSMTPSSL if cfg.smtp_ssl else PublicSMTP
         kwargs={'timeout':30}
         if cfg.smtp_ssl:kwargs['context']=ssl.create_default_context()
         with cls(cfg.smtp_host,cfg.smtp_port,**kwargs) as server:
@@ -71,7 +92,7 @@ class IMAPPoller:
         key='imap_cursor_'+account
         client=None
         try:
-            client=imaplib.IMAP4_SSL(cfg.imap_host,cfg.imap_port,ssl_context=ssl.create_default_context(),timeout=25)
+            client=PublicIMAPSSL(cfg.imap_host,cfg.imap_port,ssl_context=ssl.create_default_context(),timeout=25)
             client.login(cfg.imap_user,cfg.imap_password)
             result,_=client.select(cfg.imap_mailbox,readonly=True)
             if result!='OK':raise RuntimeError('The configured IMAP mailbox could not be selected.')

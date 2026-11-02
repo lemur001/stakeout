@@ -148,6 +148,11 @@ class Worker:
                 self.service.audit(tx,'worker','message.delivery_unknown',m['id'])
             return None
     def tick(self):
+        from .vault import IntegrationStore
+        IntegrationStore(self.service).load()
+        if self.config.mode=='production':
+            with self.db.transaction(False) as tx:
+                if not tx.setting('setup_complete',False):return
         self.recover()
         if self.imap.configured() and time.monotonic()-self.last_mail_poll>45:
             self.imap.poll();self.last_mail_poll=time.monotonic()

@@ -1,4 +1,12 @@
-# Verification record — October 2, 2026
+# Security update verification — November 1, 2026
+
+The security update was tested with Python **3.13.18** on Windows: **83 tests passed**. The expanded suite includes setup-token replay/races, MFA and recovery-code replay, encrypted persistence, key rotation, secret redaction, role/CSRF checks, fresh authentication for credential changes, HTTPS requirements, and private-network mail destination rejection. The original 57 tests remain in the suite.
+
+The runtime dependency audit of the hash-verified lock returned **no known vulnerabilities**. Every browser ES module passed the Node syntax check. The HTTPS browser wizard was tested with synthetic credentials at desktop and mobile widths; no live provider credentials or email sends were used. Container and Railway commissioning are separate checks; see [SECURITY_AUDIT.md](SECURITY_AUDIT.md) and [RAILWAY.md](RAILWAY.md).
+
+The historical record below describes the original build and its original verification environment.
+
+# Original verification record — October 2, 2026
 
 ## Automated suite
 
