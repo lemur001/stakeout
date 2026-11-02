@@ -41,8 +41,9 @@ Record public organizational emails EXACTLY as published. No email guessing, typ
 contact enrichment or residential filing addresses. Distinguish liaison from direct contacts. An old
 award or filing does not establish a current officer, active status or tax exemption.
 For every substantive claim include its actual source URL and a concise supporting paraphrase. Separate
-publication date from observation date. Record conflicts and gaps. Include existing-site exclusions.
+publication date from observation date. Record conflicts and gaps. Apply the campaign guidance below.
 Output a cited report with separate organization dossiers, public contact evidence and coverage gaps.
+Campaign guidance: {campaign_instruction}
 Do not promise rankings, domain authority, government endorsement or guaranteed municipal backlinks.
 Known city organizations and existing websites to avoid rediscovering:
 {known}
@@ -93,7 +94,8 @@ class GeminiProvider:
             city=self.service.required(tx,'cities',run['city_id'])
             known=tx.all('SELECT name,website_url,website_status FROM entities WHERE city_id=?',(run['city_id'],))
         req=loadj(run['request_json'],{})
-        prompt=RESEARCH_PROMPT.format(city=city['name'],region=city['region'],country=city['country'],category=run['category'],date=iso()[:10],limit=req.get('max_candidates',30),known=json.dumps(known,ensure_ascii=False))
+        campaign_instruction=('Find active organizations whose existing websites would benefit from a manageable rebuild. Existing websites are desired prospects, not exclusions. Document outdated content, platform constraints, ownership uncertainty and evidence of need.' if req.get('campaign')=='rebuild' else 'Find organizations needing a first website. Record existing official websites as exclusions.')
+        prompt=RESEARCH_PROMPT.format(city=city['name'],region=city['region'],country=city['country'],category=run['category'],date=iso()[:10],limit=req.get('max_candidates',30),known=json.dumps(known,ensure_ascii=False),campaign_instruction=campaign_instruction)
         body={'agent':self.config.research_agent,'input':prompt,'background':True,'store':True,
             'tools':[{'type':'mcp_server','name':'Permitted Civic Sources','url':self.config.base_url+'/mcp',
                 'headers':{'Authorization':'Bearer '+run_token(self.config,run['id'])},'allowed_tools':ALLOWED_TOOLS}]}

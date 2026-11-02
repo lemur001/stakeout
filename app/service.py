@@ -85,6 +85,8 @@ class Service:
                 e['blockers']=qualification_blockers(e,best)
                 e['evidence']=loadj(e.pop('evidence_json'))
                 e['reservation']=tx.one('SELECT * FROM reservations WHERE entity_id=?',(e['id'],))
+                latest=tx.one("SELECT t.result_json FROM discovery_targets t JOIN discovery_runs r ON r.id=t.run_id WHERE t.entity_id=? AND t.result_json!='{}' ORDER BY r.created_at DESC LIMIT 1",(e['id'],))
+                e['discovery_scores']=loadj(latest['result_json'],{}).get('scores') if latest else None
             conversations=tx.all('SELECT * FROM conversations ORDER BY created_at DESC')
             for c in conversations:
                 c['entity_ids']=[r['entity_id'] for r in tx.all('SELECT entity_id FROM reservations WHERE conversation_id=?',(c['id'],))]
@@ -107,6 +109,7 @@ class Service:
                 'worker_heartbeat':tx.setting('worker_heartbeat'),'worker_error':tx.setting('worker_error','')}
             return {'cities':cities,'clients':clients,'entities':entities,'contacts':tx.all('SELECT * FROM contacts ORDER BY email'),
                 'conversations':conversations,'messages':messages,'research':jobs,
+                'discovery':tx.all('SELECT id,city_id,campaign,state,total,completed,spent_cents,reserved_cents,error,created_at FROM discovery_runs ORDER BY created_at DESC LIMIT 100'),
                 'projects':tx.all('SELECT * FROM projects ORDER BY created_at DESC'),
                 'directory_updates':tx.all('SELECT * FROM directory_updates ORDER BY updated_at DESC'),
                 'sources':tx.all('SELECT * FROM source_registry ORDER BY title'),
@@ -178,11 +181,13 @@ class Service:
                 contact=self.required(tx,'contacts',data.contact_id)
                 if contact['status']=='suppressed': raise DomainError('This contact is suppressed.')
                 tx.execute("UPDATE contacts SET status='verified',verified_at=?,role_note=?,source_url=? WHERE id=?",(iso(),data.contact_role_note,data.contact_source_url,data.contact_id))
-            state='excluded' if data.website_status=='official_website_found' else 'review'
+            state='excluded' if data.website_status=='official_website_found' and data.campaign=='first_website' else 'review'
             if entity['state'] in ('reserved','contacted','replied','partnered') and state!='excluded': state=entity['state']
             reason='An official website already exists.' if state=='excluded' else ''
-            tx.execute('UPDATE entities SET website_status=?,website_url=?,history_note=?,activity_note=?,evidence_json=?,rights_confirmed=?,verified_at=?,verified_by=?,state=?,excluded_reason=?,updated_at=? WHERE id=?',
-                (data.website_status,data.website_url,data.history_note,data.activity_note,json.dumps([e.model_dump() for e in data.evidence]),int(data.rights_confirmed),iso(),actor,state,reason,iso(),id))
+            tx.execute('UPDATE entities SET website_status=?,website_url=?,history_note=?,activity_note=?,evidence_json=?,rights_confirmed=?,verified_at=?,verified_by=?,state=?,excluded_reason=?,updated_at=?,campaign=? WHERE id=?',
+                (data.website_status,data.website_url,data.history_note,data.activity_note,json.dumps([e.model_dump() for e in data.evidence]),int(data.rights_confirmed),iso(),actor,state,reason,iso(),data.campaign,id))
+            if entity['campaign']!=data.campaign:
+                tx.execute("UPDATE messages SET state='draft',approval_hash=NULL,approved_at=NULL,approved_by=NULL,error='Campaign changed; review the proposal again.' WHERE state IN ('approved','queued') AND conversation_id IN (SELECT conversation_id FROM reservations WHERE entity_id=?)",(id,))
             updated=self.required(tx,'entities',id)
             contacts=self._contacts(tx,id)
             best=next((c for c in contacts if c['status']=='verified'),contacts[0] if contacts else None)
@@ -254,7 +259,7 @@ class Service:
         return {'profile':tx.setting('profile'),
             'client':{k:client[k] for k in ('id','name','website','offer','renewal_terms','funded','budget_cents','city_ids_json')},
             'recipient':contact['email'],'contact_id':contact['id'],'contact_verified_at':contact['verified_at'],
-            'entities':[{'id':e['id'],'name':e['name'],'website_status':e['website_status'],'verified_at':e['verified_at'],'evidence_hash':approval_hash(e['evidence_json']),'rights_confirmed':e['rights_confirmed']} for e in entities],
+            'entities':[{'id':e['id'],'name':e['name'],'campaign':e['campaign'],'website_url':e['website_url'],'website_status':e['website_status'],'verified_at':e['verified_at'],'evidence_hash':approval_hash(e['evidence_json']),'rights_confirmed':e['rights_confirmed']} for e in entities],
             'kind':message['kind'],'conversation_kind':conv['kind'],
             'unsubscribe_url':self.config.base_url+'/unsubscribe/'+message['unsubscribe_token']}
 
@@ -277,6 +282,7 @@ class Service:
                 raise DomainError('Complete the sender profile in Settings before creating outreach.',409)
             city=self.required(tx,'cities',entities[0]['city_id'])
             names=', '.join(e['name'] for e in entities)
+            rebuild=all(e.get('campaign')=='rebuild' for e in entities)
             if kind=='followup':
                 first=tx.one("SELECT * FROM messages WHERE conversation_id=? AND kind='initial'",(conversation_id,))
                 if not first or first['state']!='sent' or not first['sent_at']:
@@ -284,8 +290,8 @@ class Service:
                 due=add_business_days(parse_time(first['sent_at']),7,city['timezone'])
                 if utcnow()<due: raise DomainError('The seven-business-day follow-up date has not arrived.')
                 subject=first['subject'] if first['subject'].lower().startswith('re:') else 'Re: '+first['subject']
-                body=(f'Hello,\n\nFollowing up once on the privately funded website sponsorship with {client["name"]}. '
-                    f'A simple site could give {names} one place for its approved history, events and contact information.\n\n'
+                body=(f'Hello,\n\nFollowing up once on the privately funded website sponsorship with {client["name"]}. '+
+                    (f'A focused update to the existing website could help {names} keep its public information useful.\n\n' if rebuild else f'A simple site could give {names} one place for its approved history, events and contact information.\n\n')+
                     'Would a short scope and ownership outline be useful? If this is not relevant, no reply is needed; this is our final follow-up.')
             elif conv['kind']=='liaison':
                 subject='Website sponsorship introductions for local associations'
@@ -295,10 +301,10 @@ class Service:
                     'The proposed scope, organization ownership, renewal terms and visible sponsor acknowledgement would be explained before any organization agrees. '
                     'This is an introduction request, not a commitment to fund every association listed.')
             else:
-                subject='A sponsored website for '+entities[0]['name']
+                subject=('A sponsored website refresh for ' if rebuild else 'A sponsored website for ')+entities[0]['name']
                 subject=subject[:200]
-                body=(f'Hello {entities[0]["name"]} team,\n\nI’m {profile["sender_name"]} with {profile["agency_name"]}. We’re working with {client["name"]} to fund community websites in {city["name"]}.\n\n'
-                    'A dedicated website could give your organization one place to share its approved history, meeting details and public contact information.\n\n'
+                body=(f'Hello {entities[0]["name"]} team,\n\nI’m {profile["sender_name"]} with {profile["agency_name"]}. We’re working with {client["name"]} to fund community websites in {city["name"]}.\n\n'+
+                    ('We would like to discuss a focused refresh of your existing website, keeping your organization in control of its domain and content.\n\n' if rebuild else 'A dedicated website could give your organization one place to share its approved history, meeting details and public contact information.\n\n')+
                     f'The funded offer is: {client["offer"]}\n\n'
                     'Your organization would own the domain and content. '+client['renewal_terms']+'\n\n'
                     f'In exchange, we’d ask for a small, visible sponsorship acknowledgement linking to {client["name"]}. '
@@ -522,12 +528,13 @@ class Service:
 
     def create_research(self,data: ResearchInput,actor: str):
         if not data.rights_acknowledged: raise DomainError('Confirm that the research sources permit the intended storage and use.')
-        key=research_key(data.city_id,data.category,data.window)
+        key=research_key(data.city_id,data.category,data.window,data.campaign)
         with self.db.transaction() as tx:
             self.required(tx,'cities',data.city_id)
             existing=tx.one('SELECT * FROM research_runs WHERE research_key=?',(key,))
             if existing: return existing
             count=tx.one('SELECT COUNT(*) AS n FROM research_runs WHERE created_at>=?',(iso(utcnow().replace(hour=0,minute=0,second=0,microsecond=0)),))['n']
+            count+=tx.one('SELECT COUNT(*) AS n FROM discovery_runs WHERE created_at>=?',(iso(utcnow().replace(hour=0,minute=0,second=0,microsecond=0)),))['n']
             if count>=self.config.daily_research_limit: raise DomainError('The daily research-job ceiling has been reached.',429)
             readiness=self.config.research_readiness()
             id=uid()
@@ -538,12 +545,18 @@ class Service:
 
     def import_report(self,data: ManualReport,actor: str):
         if not data.rights_acknowledged: raise DomainError('Confirm reuse permission before importing report content.')
+        key='manual:'+approval_hash({'city':data.city_id,'report':data.report,'campaign':data.campaign})
         with self.db.transaction() as tx:
             self.required(tx,'cities',data.city_id)
+            existing=tx.one('SELECT * FROM research_runs WHERE research_key=?',(key,))
+            if existing:return existing
+            day=iso(utcnow().replace(hour=0,minute=0,second=0,microsecond=0))
+            count=tx.one('SELECT COUNT(*) AS n FROM research_runs WHERE created_at>=?',(day,))['n']+tx.one('SELECT COUNT(*) AS n FROM discovery_runs WHERE created_at>=?',(day,))['n']
+            if count>=self.config.daily_research_limit:raise DomainError('The daily research-job ceiling has been reached.',429)
             id=uid()
             ready=bool(self.config.gemini_api_key)
             tx.execute('INSERT INTO research_runs(id,city_id,category,research_key,"window",state,request_json,report,error,next_run_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
-                (id,data.city_id,data.category,'manual:'+approval_hash({'city':data.city_id,'report':data.report}),iso()[:7],'extracting' if ready else 'setup_required',json.dumps({'manual':True,'title':data.title,'max_candidates':100,'rights_acknowledged':True}),data.report,'' if ready else 'Add GEMINI_API_KEY to extract this stored report.',iso(),iso(),iso()))
+                (id,data.city_id,data.category,key,iso()[:7],'extracting' if ready else 'setup_required',json.dumps({'manual':True,'title':data.title,'campaign':data.campaign,'max_candidates':100,'rights_acknowledged':True}),data.report,'' if ready else 'Add GEMINI_API_KEY to extract this stored report.',iso(),iso(),iso()))
             self.audit(tx,actor,'report.imported',id,data.title)
             return self.required(tx,'research_runs',id)
 
@@ -593,10 +606,12 @@ class Service:
                     # Reviewed records are never silently overwritten by model output.
                     continue
                 id=uid()
-                excluded=c.website_status=='official_website_found' and bool(c.website_url)
+                campaign=request.get('campaign','first_website')
+                excluded=c.website_status=='official_website_found' and bool(c.website_url) and campaign=='first_website'
                 tx.execute('INSERT INTO entities(id,city_id,name,canonical_name,category,website_status,proposed_website_status,website_url,state,history_note,activity_note,source_note,evidence_json,research_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
                     (id,run['city_id'],c.name,normalize_name(c.name),c.category,'official_website_found' if excluded else 'unknown',c.website_status,c.website_url,'excluded' if excluded else 'review',c.history_note,c.activity_note,
                      'Gemini-extracted candidate. Claims, sources, contact roles and website findings require independent human review.',json.dumps([e.model_dump() for e in c.evidence]),run_id,iso(),iso()))
+                tx.execute('UPDATE entities SET campaign=? WHERE id=?',(campaign,id))
                 for contact in c.contacts:
                     old=tx.one('SELECT id FROM contacts WHERE email_key=?',(email_key(contact.email),))
                     cid=old['id'] if old else uid()

@@ -1,5 +1,5 @@
 import {escape as e,label,date,time,money,icon,badge,button,empty,shortCategory,websiteLabels,external,option} from './ui.js';
-export const navItems=[['overview','grid','Overview'],['prospects','users','Organizations'],['cities','pin','Cities'],['clients','building','Client sponsors'],['research','search','Research'],['outreach','mail','Outreach'],['projects','globe','Website projects'],['settings','settings','Settings']];
+export const navItems=[['overview','grid','Overview'],['prospects','users','Organizations'],['cities','pin','Cities'],['clients','building','Client sponsors'],['discovery','search','Prospect discovery'],['research','file','AI research'],['outreach','mail','Outreach'],['projects','globe','Website projects'],['settings','settings','Settings']];
 const cityName=(s,id)=>{const c=s.cities.find(x=>x.id===id);return c?c.name+', '+c.region:'—'};
 const clientName=(s,id)=>s.clients.find(x=>x.id===id)?.name||'Unassigned';
 const entityName=(s,id)=>s.entities.find(x=>x.id===id)?.name||'Organization';

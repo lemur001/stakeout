@@ -1,0 +1,74 @@
+import {api} from './api.js';
+import {escape as e,dialog,button,field,input,select,option,check,textarea,external,badge,time,closeDialogs,toast} from './ui.js';
+let selected='',generation=0,query='',sortBy='fit';
+const dollars=n=>'$'+((n||0)/100).toFixed(2);
+const campaign=x=>x==='rebuild'?'Website rebuild':'First website';
+const score=x=>x===null||x===undefined?'Unknown':`${x}/100`;
+export async function render(s,el){
+ const turn=++generation;
+ const runs=s.discovery||[];
+ if(!selected||!runs.some(r=>r.id===selected))selected=runs[0]?.id||'';
+ el.innerHTML=`<div class="page-header"><div><h1>Prospect discovery</h1><p>Find organizations, inspect websites and review the evidence behind each opportunity.</p></div><div class="page-actions">${button('Investigate a city with AI','new-research','search','secondary')}${button('New hunt','hunt-new','plus','primary')}</div></div>
+ <div class="notice blue"><div><strong>Two campaigns, one organization record.</strong><p>Find groups needing their first website or evaluate existing sites for a rebuild. Discovery never approves outreach. AI city research can add organizations beyond IRS filings; include existing city records in your next hunt.</p></div></div>
+ <section class="panel hunt-controls">${field('hunt_id','Hunt',select('hunt_id',runs.map(r=>option(r.id,`${s.cities.find(c=>c.id===r.city_id)?.name||'City'} · ${campaign(r.campaign)} · ${r.state} · ${time(r.created_at)}`,selected)).join(''),'Choose a saved hunt to see its results.'))}</section><div id="hunt-results" aria-live="polite">${selected?'<p>Loading hunt…</p>':'<div class="empty-state"><h2>Start your first hunt</h2><p>Choose a city, campaign and research budget. Free public datasets can be used without AI or search credentials.</p></div>'}</div>`;
+ el.querySelector('[name="hunt_id"]')?.addEventListener('change',ev=>{selected=ev.target.value;query='';render(s,el);});
+ if(!selected)return;
+ try{
+  const data=await api('/api/discovery/'+selected);if(turn!==generation||!el.isConnected||!el.querySelector('#hunt-results'))return;
+  const r=data.run,results=el.querySelector('#hunt-results');
+  results.innerHTML=`<section class="panel hunt-controls"><div class="section-header"><div><h2>${campaign(r.campaign)} ${badge(r.state)}</h2><p>${r.completed} of ${r.total} candidates checked · recorded spend ${dollars(r.spent_cents)} · reserved or uncertain ${dollars(r.reserved_cents)} · approved estimate envelope ${dollars(r.params.budget_cents)}</p></div><div>${['queued','enriching'].includes(r.state)?button('Pause','hunt-pause','close','secondary',r.id):button('Resume / refresh checks','hunt-resume','refresh','secondary',r.id)}</div></div>${r.error?`<p class="muted">${e(r.error)}</p>`:''}<p class="muted">Scores are screening signals, not verified backlink value. Costs are rounded up to the next cent per call. Provider charges may exceed estimates. An uncertain paid call is held for billing review and never retried automatically.</p>${field('hunt_search','Filter organizations',input('hunt_search',query,'search','placeholder="Name, site, or evidence gap"'))}<div id="hunt-table"></div></section>
+  <details class="panel hunt-controls"><summary>Paid check ledger (${data.spend.length})</summary><div class="table-wrap"><table><thead><tr><th>Operation</th><th>Outcome</th><th>Reserved estimate</th><th>Recorded cost</th></tr></thead><tbody>${data.spend.map(x=>`<tr><td>${e(x.operation.split(':').slice(1).join(':'))}</td><td>${e(x.state)}</td><td>${dollars(x.reserved_cents)}</td><td>${x.actual_cents===null?'Unknown':dollars(x.actual_cents)}</td></tr>`).join('')}</tbody></table></div></details>`;
+  const sorting=document.createElement('label');sorting.className='field';sorting.innerHTML=`<span>Rank by</span>${select('hunt_sort',option('fit','Project fit',sortBy)+option('link_opportunity','Link opportunity',sortBy)+option('confidence','Evidence confidence',sortBy))}`;
+  results.querySelector('#hunt-table').before(sorting);
+  const draw=()=>{
+   const rows=data.targets.filter(x=>JSON.stringify([x.name,x.result.scores?.gaps,x.result.site?.url]).toLowerCase().includes(query.toLowerCase()));
+   rows.sort((a,b)=>(b.result.scores?.[sortBy]??-1)-(a.result.scores?.[sortBy]??-1)||a.name.localeCompare(b.name));
+   results.querySelector('#hunt-table').innerHTML=`<p class="muted">${rows.length} matches. Showing up to 100; narrow the filter to find another organization.</p><div class="table-wrap"><table class="hunt-table"><thead><tr><th>Organization</th><th>Project fit</th><th>Link opportunity</th><th>Evidence confidence</th><th>Finding</th><th></th></tr></thead><tbody>${rows.slice(0,100).map(x=>`<tr><td><button class="entity-name" data-action="hunt-profile" data-id="${e(x.entity_id)}">${e(x.name)}</button><small class="cell-sub">${e(x.state)}${x.entity_campaign!==r.campaign?' · campaign review needed':''}</small></td><td>${score(x.result.scores?.fit)}</td><td>${score(x.result.scores?.link_opportunity)}</td><td>${score(x.result.scores?.confidence)}</td><td>${x.result.site?.url?external(x.result.site.url,'Matched site'):'No confirmed site'}<small class="cell-sub">${e(x.result.scores?.gaps?.[0]||'Checks pending')}</small></td><td>${button('Review','review','shield','secondary',x.entity_id)}</td></tr>`).join('')}</tbody></table></div>`;
+  };draw();results.querySelector('[name="hunt_search"]').addEventListener('input',ev=>{query=ev.target.value;draw();});sorting.querySelector('select').addEventListener('change',ev=>{sortBy=ev.target.value;draw();});
+ }catch(err){const box=el.querySelector('#hunt-results');if(turn===generation&&box)box.textContent=err.message;}
+}
+async function form(s){
+ if(!s.cities.length){toast('Add a city first.',true);return;}
+ const meta=await api('/api/discovery-options');
+ dialog('modal','Start a prospect hunt','Use inexpensive inventory checks first. Paid enrichment is optional.',`<form data-form="hunt" class="form-body">
+ ${field('city_id','City',select('city_id',s.cities.map(c=>option(c.id,c.name+', '+c.region,s.cities[0].id)).join('')))}
+ ${field('center_zip','Center ZIP (optional)',input('center_zip','','text','pattern="[0-9]{5}" maxlength="5" inputmode="numeric"'),'Overrides the Census city center; useful for unincorporated or ambiguous places.')}
+ ${field('campaign','Campaign',select('campaign',option('rebuild','Improve an existing website','rebuild')+option('first_website','Build a first website','rebuild')))}
+ <div class="form-grid">${field('radius_miles','Radius in miles',input('radius_miles',10,'number','min="1" max="50" required'))}${field('max_candidates','Candidate limit',input('max_candidates',100,'number','min="1" max="1000" required'))}${field('max_revenue','Maximum reported revenue in USD',input('max_revenue',500000,'number','min="0" max="100000000" required'),'Use 0 for no revenue filter.')}</div>
+ ${check('use_irs','Discover organizations from IRS filings',true,'The first hunt downloads public IRS and Census datasets and may take several minutes. Radius uses ZIP centroids.')}${check('include_existing','Include existing city records and AI research candidates',true)}${check('recent_only','Require an IRS filing within the last two years',true)}
+ <details><summary>Organization types</summary><div class="hunt-types">${Object.entries(meta.types).map(([k,v])=>check('types',v,['service','history','civic','veterans','arts'].includes(k)).replace('name="types"',`name="types" value="${e(k)}"`)).join('')}</div></details>
+ <details><summary>Add organizations from another source</summary>${field('seeds','One organization per line',textarea('seeds','',4,'placeholder="Name | Website (optional) | Source URL | EIN (optional)"'),'A public source URL is required. Existing EINs and matching city names are reused.')}</details>
+ <h3>Optional paid investigation</h3><p>DataForSEO checks missing websites and backlink profiles. Planning estimates are ${dollars(meta.estimates.search)} per search and ${dollars(meta.estimates.summary+meta.estimates.links)} for a backlink summary and sample. Actual charges depend on your provider account.</p>
+ ${check('use_web','Use up to two search queries for unresolved organizations')}${check('use_backlinks','Fetch backlink profiles and inspect up to three linking pages')}
+ ${field('budget','Approved estimate envelope in USD',input('budget',0,'number','min="0" max="100" step="0.01" required'),'The worker reserves estimated costs before each paid call and records returned charges. This is not a guaranteed provider billing cap.')}
+ ${check('paid_approved','I approve the selected paid checks within this estimate envelope')}
+ ${check('rights_acknowledged','I have permission to retrieve and retain these sources and provider results')}
+ <p class="muted">Provider credentials are configured in Settings → Setup & connections. No email will be sent.</p>
+ <div class="dialog-actions"><button type="button" class="btn secondary" data-action="close-modal">Cancel</button><button class="btn primary" type="submit">Start hunt</button></div></form>`,true);
+}
+export async function action(s,a,id,reload){
+ if(a==='hunt-new')return form(s);
+ if(a==='hunt-pause'||a==='hunt-resume'){await api('/api/discovery/'+id+'/'+a.slice(5),{});await reload();return;}
+ if(a==='hunt-evidence'){
+  const records=await api('/api/entities/'+id+'/discovery-evidence');
+  return dialog('sheet','Discovery evidence','Observations retain their source, observation time and refresh deadline.',`<div class="form-body">${records.map(r=>`<details><summary>${e(r.kind.split(':')[0])} · ${e(r.status)} · ${time(r.observed_at)}</summary>${external(r.url,r.url)}<p>Refresh after ${time(r.expires_at)}</p><pre class="report-text">${e(JSON.stringify(r.observation,null,2))}</pre></details>`).join('')||'<p>No discovery observations yet.</p>'}</div>`);
+ }
+ if(a==='hunt-profile'){
+  const d=await api('/api/discovery/'+selected);const x=d.targets.find(x=>x.entity_id===id);if(!x)return;
+  const r=x.result,sc=r.scores||{},site=r.site||{};
+  return dialog('sheet',x.name,'Discovery findings require independent review.',`<div class="form-body"><div class="metric-strip"><div class="metric"><span>Project fit</span><strong>${score(sc.fit)}</strong></div><div class="metric"><span>Link opportunity</span><strong>${score(sc.link_opportunity)}</strong></div><div class="metric"><span>Evidence confidence</span><strong>${score(sc.confidence)}</strong></div></div>
+   <h3>Why it ranked here</h3><ul>${(sc.reasons||[]).map(v=>`<li>${e(v)}</li>`).join('')}</ul><h3>What still needs checking</h3><ul>${(sc.gaps||[]).map(v=>`<li>${e(v)}</li>`).join('')}</ul>
+   <h3>Website findings</h3>${site.url?external(site.url,site.url):'<p>No confirmed website.</p>'}<p>${e(site.excerpt||'')}</p><dl><dt>Platform</dt><dd>${e(site.platform||'Unknown')}</dd><dt>Member area</dt><dd>${site.member_area?'Detected; review complexity':'Not detected'}</dd><dt>Store</dt><dd>${site.store?'Detected; review complexity':'Not detected'}</dd><dt>Designer credit</dt><dd>${e(site.designer_credit||'Not detected')}</dd></dl>
+   <h3>Domain history</h3><pre class="report-text">${e(JSON.stringify(r.domain||{},null,2))}</pre>
+   <h3>Backlink evidence</h3><p>Referring domains reported: ${e(r.backlinks?.referring_domains??'Unknown')}. Link opportunity currently uses referring-domain count as a screening signal; it does not establish relevance or ranking benefit.</p>${(r.backlinks?.links||[]).map(l=>`<div class="directory-row">${external(l.source_url,l.source_url)}<p>Anchor: ${e(l.anchor||'Not reported')} · ${l.verification?.verified===true?'Link to this site observed':l.verification?.verified===false?'Link not found on fetched page':'Not verified'} · provider follow status: ${l.dofollow===true?'follow':l.dofollow===false?'nofollow':'unknown'}</p></div>`).join('')}
+   <h3>Published contact candidates</h3><p>${e((site.public_emails||[]).join(', ')||'None found in the fetched page.')}</p><p>Verify organizational role and add a sourced contact through the review form.</p>
+   <div class="dialog-actions">${button('Inspect sources','hunt-evidence','file','secondary',id)}${button('Review organization','review','shield','primary',id)}</div></div>`);
+ }
+}
+export async function submit(form,reload,go){
+ const v=Object.fromEntries(new FormData(form));
+ const seeds=(v.seeds||'').split('\n').filter(x=>x.trim()).map(line=>{const [name,website='',source_url='',ein='']=line.split('|').map(x=>x.trim());return {name,website,source_url,ein};});
+ const payload={city_id:v.city_id,campaign:v.campaign,center_zip:v.center_zip,radius_miles:Number(v.radius_miles),max_candidates:Number(v.max_candidates),max_revenue:Number(v.max_revenue),budget_cents:Math.round(Number(v.budget)*100),types:new FormData(form).getAll('types'),seeds};
+ for(const k of ['use_irs','include_existing','recent_only','use_web','use_backlinks','paid_approved','rights_acknowledged'])payload[k]=!!v[k];
+ const r=await api('/api/discovery',payload);selected=r.id;query='';closeDialogs();await reload();go('discovery');toast('Hunt queued. Results will appear as checks finish.');
+}

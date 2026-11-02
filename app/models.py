@@ -35,8 +35,10 @@ class Evidence(Strict):
     def url(cls,v): return public_url(v,required=True)
 
 WebsiteStatus=Literal['unknown','official_website_found','hosted_chapter_page_only','social_only','no_site_found_after_checks','broken_or_parked']
+Campaign=Literal['first_website','rebuild']
 
 class ReviewInput(Strict):
+    campaign: Campaign='first_website'
     website_status: WebsiteStatus
     website_url: str=''
     history_note: str=Field(default='',max_length=3000)
@@ -78,6 +80,7 @@ class MessageEdit(Strict):
         return v
 
 class ResearchInput(Strict):
+    campaign: Campaign='first_website'
     city_id: str
     category: Literal['historical_preservation','neighborhood_association','legacy_civic_club','cultural_veteran','specialized_nonprofit']
     window: str=Field(pattern=r'^\d{4}-\d{2}(?:-[A-Za-z0-9]{1,12})?$')
@@ -86,6 +89,7 @@ class ResearchInput(Strict):
     rights_acknowledged: bool=False
 
 class ManualReport(Strict):
+    campaign: Campaign='first_website'
     city_id: str
     category: Literal['historical_preservation','neighborhood_association','legacy_civic_club','cultural_veteran','specialized_nonprofit']
     title: str=Field(min_length=3,max_length=200)

@@ -15,13 +15,16 @@ from .config import Config
 from .core import DomainError, iso, validate_email
 from .models import Strict
 
-SECRET_FIELDS = frozenset({'gemini_api_key','brave_key','smtp_password','imap_password','webhook_secret'})
+SECRET_FIELDS = frozenset({'gemini_api_key','brave_key','smtp_password','imap_password','webhook_secret','dataforseo_login','dataforseo_password','opr_key'})
 
 
 class IntegrationInput(Strict):
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=False)
     gemini_api_key: str = Field(default='', max_length=4096, repr=False)
     brave_key: str = Field(default='', max_length=4096, repr=False)
+    dataforseo_login: str = Field(default='', max_length=4096, repr=False)
+    dataforseo_password: str = Field(default='', max_length=4096, repr=False)
+    opr_key: str = Field(default='', max_length=4096, repr=False)
     smtp_password: str = Field(default='', max_length=4096, repr=False)
     imap_password: str = Field(default='', max_length=4096, repr=False)
     webhook_secret: str = Field(default='', max_length=4096, repr=False)
@@ -43,7 +46,7 @@ class IntegrationInput(Strict):
     daily_send_limit: int = Field(default=5, ge=1, le=100)
     daily_research_limit: int = Field(default=5, ge=1, le=100)
     max_research_concurrent: int = Field(default=1, ge=1, le=3)
-    clear_secrets: list[str] = Field(default_factory=list, max_length=5)
+    clear_secrets: list[str] = Field(default_factory=list, max_length=8)
 
     @field_validator('smtp_host','imap_host')
     @classmethod
