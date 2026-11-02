@@ -3,6 +3,7 @@ import {showSetup} from './setup.js';
 import * as P from './pages.js';
 import * as D from './dialogs.js';
 import * as H from './discovery.js';
+import {resolveCity} from './location.js';
 import {escape as e,icon,dialog,closeDialogs,toast,button} from './ui.js';
 let state,user,session,pendingMfa=null,settingUp=false,route='overview',outreachTab='all';
 const filters={city:'',query:'',status:'',website:''};const selected=new Set();
@@ -48,7 +49,7 @@ async function clickAction(target){const a=target.dataset.action,id=target.datas
  case 'filter-status':filters.status=target.dataset.value;selected.clear();renderPage();return;
  case 'clear-selection':selected.clear();renderPage();return;
  case 'open-city':filters.city=id;filters.query=filters.status=filters.website='';return go('prospects');
- case 'new-research':if(!state.cities.length)return D.cityForm();return D.researchForm(state,id);
+ case 'new-research':return D.researchForm(state,id);
  case 'import-report':return D.reportForm(state);
  case 'new-source':return D.sourceForm(state);
  case 'reserve-one':return D.reserveForm(state,[id]);
@@ -96,7 +97,7 @@ document.addEventListener('submit',async ev=>{
    await api('/api/clients'+(id?'/'+id:''),{name:v.name,website:v.website,city_ids:new FormData(form).getAll('city_ids'),funded:!!v.funded,budget_cents:Math.round(Number(v.budget)*100),max_slots:Number(v.max_slots),offer:v.offer,renewal_terms:v.renewal_terms},id?'PUT':'POST');
    closeDialogs();await reload();go('clients');toast('Client sponsor saved.');return;
   }
-  if(kind==='hunt'){await H.submit(form,reload,go);return;}
+  if(kind==='hunt'){await H.submit(form,reload,go,state);return;}
   if(kind==='review'){
    const evidence=[...form.querySelectorAll('.evidence-row')].map(row=>({url:row.querySelector('[name="evidence_url"]').value.trim(),note:row.querySelector('[name="evidence_note"]').value.trim()})).filter(x=>x.url||x.note);
    await api('/api/entities/'+id+'/review',{campaign:v.campaign,website_status:v.website_status,website_url:v.website_url,history_note:v.history_note,activity_note:v.activity_note,evidence,rights_confirmed:!!v.rights_confirmed,contact_id:v.contact_id||null,verify_contact:!!v.verify_contact,contact_role_note:v.contact_role_note,contact_source_url:v.contact_source_url});
@@ -111,10 +112,10 @@ document.addEventListener('submit',async ev=>{
    const cv=await api('/api/conversations',{entity_ids:JSON.parse(form.dataset.ids),client_id:v.client_id,contact_id:v.contact_id});selected.clear();closeDialogs();await reload();go('outreach');toast('Sponsor reserved. Create and review the first draft.');return;
   }
   if(kind==='research'){
-   const run=await api('/api/research',{city_id:v.city_id,campaign:v.campaign,category:v.category,window:v.window,max_candidates:Number(v.max_candidates),max_tool_calls:Number(v.max_tool_calls),rights_acknowledged:!!v.rights_acknowledged});
+   const run=await api('/api/research',{city_id:await resolveCity(form,state),campaign:v.campaign,category:v.category,window:v.window,max_candidates:Number(v.max_candidates),max_tool_calls:Number(v.max_tool_calls),rights_acknowledged:!!v.rights_acknowledged});
    closeDialogs();await reload();go('research');toast(run.state==='setup_required'?'Research run saved; provider setup is required.':'Research job queued.');return;
   }
-  if(kind==='report'){await api('/api/research/import',{city_id:v.city_id,campaign:v.campaign,category:v.category,title:v.title,report:v.report,rights_acknowledged:!!v.rights_acknowledged});closeDialogs();await reload();go('research');toast('Report saved for candidate extraction.');return;}
+  if(kind==='report'){await api('/api/research/import',{city_id:await resolveCity(form,state),campaign:v.campaign,category:v.category,title:v.title,report:v.report,rights_acknowledged:!!v.rights_acknowledged});closeDialogs();await reload();go('research');toast('Report saved for candidate extraction.');return;}
   if(kind==='source'){await api('/api/sources',{city_id:v.city_id||null,url:v.url,title:v.title,rights_note:v.rights_note,fetch_allowed:!!v.fetch_allowed});closeDialogs();await reload();toast('Source permissions recorded.');return;}
   if(kind==='retry'){await api('/api/research/'+id+'/retry',{provider_id:v.provider_id||null});document.querySelector('#modal').close();await reload();D.researchSheet(state,id);toast('Research state updated.');return;}
   if(kind==='candidates'){let data;try{data=JSON.parse(v.json);}catch{throw new Error('Enter valid JSON.');}await api('/api/research/'+id+'/import-candidates',data);closeDialogs();await reload();go('prospects');toast('Candidates imported for review. No contacts were approved.');return;}

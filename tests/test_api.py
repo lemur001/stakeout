@@ -18,7 +18,7 @@ def client(tmp_path):
 
 def test_dashboard_and_all_assets_load(client):
  assert client.get('/').status_code==200
- for path in ['styles.css','app.js','api.js','pages.js','dialogs.js','ui.js','favicon.svg']:
+ for path in ['styles.css','app.js','api.js','pages.js','dialogs.js','ui.js','location.js','discovery.js','favicon.svg']:
   assert client.get('/assets/'+path).status_code==200
  assert "script-src 'self'" in client.get('/').headers['content-security-policy']
 

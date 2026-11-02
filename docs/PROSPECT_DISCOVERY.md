@@ -5,7 +5,7 @@ This combines the uploaded Backlink Hunter's nonprofit classification and bulk-d
 ## Run a hunt
 
 1. Finish the secure setup wizard. In **Settings → Setup & connections**, confirm source permissions. Public inventory and website checks need no provider credentials.
-2. Add a city with a two-letter state abbreviation. Open **Prospect discovery → New hunt**.
+2. Open **Prospect discovery → New hunt** and type any US city, then choose its state. There is no separate city setup step. Starting the hunt automatically saves or reuses the location. AI research and report imports work the same way.
 3. Choose **Build a first website** or **Improve an existing website**. Set a radius, revenue ceiling, organization types and candidate limit. A center ZIP overrides the Census city location for unincorporated or ambiguous places.
 4. Choose IRS inventory, existing city records, or manually sourced organizations. To find groups outside IRS coverage, use **Investigate a city with AI** and include its imported candidates in a later hunt. AI research retains its separate provider configuration and job limits.
 5. Start with unpaid checks. Optionally enter fresh DataForSEO API credentials in Connections, select search/backlink checks and approve an estimate envelope. Old uploaded secrets are never used.

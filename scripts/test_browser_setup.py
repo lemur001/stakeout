@@ -38,7 +38,7 @@ def main():
         with socket.socket() as sock:sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
         config=Config(mode='production',base_url=f'https://127.0.0.1:{port}',database_path=str(folder/'browser.sqlite3'),database_url='',
                       app_secret=secrets.token_urlsafe(48),encryption_key=base64.urlsafe_b64encode(secrets.token_bytes(32)).decode(),
-                      setup_token=secrets.token_urlsafe(48),admin_email='',admin_password='',run_worker=False,seed_on_start=True,allow_live_send=False)
+                      setup_token=secrets.token_urlsafe(48),admin_email='',admin_password='',run_worker=False,seed_on_start=False,allow_live_send=False)
         app=create_app(config)
         server=uvicorn.Server(uvicorn.Config(app,host='127.0.0.1',port=port,access_log=False,log_level='error',
                                            ssl_certfile=str(folder/'cert.pem'),ssl_keyfile=str(folder/'key.pem')))

@@ -1,4 +1,5 @@
 import {api} from './api.js';
+import {locationFields,resolveCity} from './location.js';
 import {escape as e,dialog,button,field,input,select,option,check,textarea,external,badge,time,closeDialogs,toast} from './ui.js';
 let selected='',generation=0,query='',sortBy='fit',page=0;
 const dollars=n=>'$'+((n||0)/100).toFixed(2);
@@ -31,10 +32,9 @@ export async function render(s,el){
  }catch(err){const box=el.querySelector('#hunt-results');if(turn===generation&&box)box.textContent=err.message;}
 }
 async function form(s){
- if(!s.cities.length){toast('Add a city first.',true);return;}
  const meta=await api('/api/discovery-options');
  dialog('modal','Start a prospect hunt','Use inexpensive inventory checks first. Paid enrichment is optional.',`<form data-form="hunt" class="form-body">
- ${field('city_id','City',select('city_id',s.cities.map(c=>option(c.id,c.name+', '+c.region,s.cities[0].id)).join('')))}
+ ${locationFields(s)}
  ${field('center_zip','Center ZIP (optional)',input('center_zip','','text','pattern="[0-9]{5}" maxlength="5" inputmode="numeric"'),'Overrides the Census city center; useful for unincorporated or ambiguous places.')}
  ${field('campaign','Campaign',select('campaign',option('rebuild','Improve an existing website','rebuild')+option('first_website','Build a first website','rebuild')))}
  <div class="form-grid">${field('radius_miles','Radius in miles',input('radius_miles',10,'number','min="1" max="50" required'))}${field('max_candidates','Candidate limit',input('max_candidates',100,'number','min="1" max="1000" required'))}${field('max_revenue','Maximum reported revenue in USD',input('max_revenue',500000,'number','min="0" max="100000000" required'),'Use 0 for no revenue filter.')}</div>
@@ -70,10 +70,10 @@ export async function action(s,a,id,reload){
    <div class="dialog-actions">${button('Inspect sources','hunt-evidence','file','secondary',id)}${button('Review organization','review','shield','primary',id)}</div></div>`);
  }
 }
-export async function submit(form,reload,go){
+export async function submit(form,reload,go,s){
  const v=Object.fromEntries(new FormData(form));
  const seeds=(v.seeds||'').split('\n').filter(x=>x.trim()).map(line=>{const [name,website='',source_url='',ein='']=line.split('|').map(x=>x.trim());return {name,website,source_url,ein};});
- const payload={city_id:v.city_id,campaign:v.campaign,center_zip:v.center_zip,radius_miles:Number(v.radius_miles),max_candidates:Number(v.max_candidates),max_revenue:Number(v.max_revenue),budget_cents:Math.round(Number(v.budget)*100),types:new FormData(form).getAll('types'),seeds};
+ const payload={city_id:await resolveCity(form,s),campaign:v.campaign,center_zip:v.center_zip,radius_miles:Number(v.radius_miles),max_candidates:Number(v.max_candidates),max_revenue:Number(v.max_revenue),budget_cents:Math.round(Number(v.budget)*100),types:new FormData(form).getAll('types'),seeds};
  for(const k of ['use_irs','include_existing','recent_only','use_web','use_backlinks','paid_approved','rights_acknowledged'])payload[k]=!!v[k];
  const r=await api('/api/discovery',payload);selected=r.id;query='';page=0;closeDialogs();await reload();go('discovery');toast('Hunt queued. Results will appear as checks finish.');
 }
