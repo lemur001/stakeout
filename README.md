@@ -4,13 +4,13 @@ A working, single-agency, multi-client workspace for city research, civic websit
 
 ## Secure Railway setup
 
-For a new hosted workspace, follow [the Railway deployment guide](docs/RAILWAY.md). It covers the persistent volume, three independent boot secrets, public HTTPS domain, and the first-run wizard. The wizard creates an administrator with an Argon2id password hash, authenticator-based MFA and recovery codes, then guides you through your agency identity and optional research/mail connections.
+For a new hosted workspace, follow [the Railway deployment guide](docs/RAILWAY.md). A [reusable template specification](docs/RAILWAY_TEMPLATE.md) and [automatically generated template variables](deploy/railway-template.env) are prepared; saving the template in Railway and adding its actual deployment button are still pending. The wizard creates an administrator with an Argon2id password hash, authenticator-based MFA and recovery codes, then guides you through your agency identity and optional research/mail connections.
 
-Integration credentials and authenticator seeds are encrypted with AES-256-GCM before storage. The encryption key stays in a sealed Railway variable, separately from the database. Saved passwords and API keys are never returned by the settings API or included in workspace exports. The server must decrypt credentials in memory to use them; encryption does not protect against compromise of the running server or the Railway account.
+Integration credentials and authenticator seeds are encrypted with AES-256-GCM before storage. The encryption key stays in a Railway variable, separately from the database; seal it after saving a separate recovery copy. Saved passwords and API keys are never returned by the settings API or included in workspace exports. The server must decrypt credentials in memory to use them; encryption does not protect against compromise of the running server or the Railway account.
 
-See [the security audit](docs/SECURITY_AUDIT.md) for findings, fixes, verification and remaining deployment checks. The Docker image now installs [the hash-verified runtime lock](requirements.lock); CI tests the image and wizard. No production deployment has been performed by the local audit.
+See [the security audit](docs/SECURITY_AUDIT.md) for findings, fixes, verification and remaining deployment checks. The Docker image installs [the hash-verified runtime lock](requirements.lock); CI tests the image and wizard. The audited branch has also launched successfully on Railway with public HTTPS and a persistent volume; initial administrator enrollment and provider setup remain for the owner.
 
-This is an operating first release, not an unattended production service. Gemini and mail adapters are implemented, but were not exercised against live accounts during this build. Public deployment, a funded Gemini API account, licensed source access and an approved sending mailbox still need to be connected. No emails have been sent or websites published.
+This is an operating first release, not an unattended production service. Gemini and mail adapters are implemented, but were not exercised against live accounts during this build. A funded Gemini API account, licensed source access and an approved sending mailbox still need to be connected. No emails have been sent.
 
 ## Start on your computer
 
@@ -116,7 +116,7 @@ For multiple mailbox folders, or providers using nonstandard bounce/complaint fo
 
 ## Deploy as one service
 
-The included Dockerfile serves both dashboard and API; the worker runs in the same process for the pilot. Follow [docs/RAILWAY.md](docs/RAILWAY.md) for the current deployment procedure and acceptance checks. The Linux CI workflow successfully built and booted the Docker image, verified its unprivileged server UID, and restarted it with a persistent volume. An actual Railway deployment remains to be commissioned.
+The included Dockerfile serves both dashboard and API; the worker runs in the same process for the pilot. Follow [docs/RAILWAY.md](docs/RAILWAY.md) for deployment and acceptance checks. Linux CI verified the image's unprivileged server UID and persistence across a restart. A real Railway launch passed health, HTTPS, setup-page, anonymous-access and invalid-token checks. Provider connections and backup restoration still need commissioning.
 
 Before exposing the application, configure:
 

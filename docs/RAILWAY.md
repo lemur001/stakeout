@@ -1,11 +1,15 @@
 # Deploy a new Stakeout workspace on Railway
 
-This is the deployment procedure for the hardened application. The Security and deployment checks workflow passed Python tests, the HTTPS browser wizard, the dependency audit, and Linux image build/boot/restart checks. See [the verified CI run](https://github.com/lemur001/stakeout/actions/runs/41387616937). Confirm the branch you deploy has passing checks. A real Railway deployment and live provider connections still need commissioning.
+The audited branch launched successfully on Railway on November 2, 2026 UTC: the image built, its persistent volume mounted, healthchecks passed, and the public HTTPS page displayed the setup wizard. Anonymous settings requests, invalid setup tokens and cross-origin setup requests were rejected. [CI passed](https://github.com/lemur001/stakeout/actions/runs/41387886236) on deployed commit `63808bd4fb10d8797423a29af71d58311edb2402`. The owner still needs to claim the workspace and connect providers.
+
+The [one-click template specification](RAILWAY_TEMPLATE.md) includes storage, HTTPS and deployment-time secret generation. Saving that template in Railway is still pending dashboard access; there is no working deployment badge yet. Once saved, template users will skip the manual infrastructure and secret-generation steps below. An ordinary GitHub-repository deployment does not provision those resources from this repository alone.
+
+The remaining sections document manual installation and operations. Railway is retiring legacy `railway.json` processing; configure healthchecks, storage and runtime settings on the service or template itself.
 
 ## 1. Create the service and durable storage
 
 1. Make the reviewed security changes available on the GitHub branch you will deploy. Create a new Railway project, select **Deploy from GitHub repo**, and select `lemur001/stakeout` and that branch.
-2. Keep the Dockerfile builder and `python docker_entrypoint.py` start command from `railway.json`. Use **one replica** and the in-process worker. Avoid a separate worker for this first deployment.
+2. Use the repository's `Dockerfile` and set `python docker_entrypoint.py` as the service start command. Set healthcheck path `/health`, timeout 120 seconds, an on-failure restart policy with five retries, and disable sleep/serverless. Use **one replica** and the in-process worker. Avoid a separate worker for this first deployment.
 3. Attach a volume to this service at **`/app/data`**. Set `DATABASE_PATH=/app/data/civic.sqlite3`. The application refuses to start with ephemeral SQLite storage on Railway.
 4. Under Networking, generate a public domain. Railway provides TLS. `RAILWAY_PUBLIC_DOMAIN` supplies the default application origin; set `APP_URL=https://your-domain` explicitly for a custom domain. Use only the origin, without a path, query, or trailing slash.
 
