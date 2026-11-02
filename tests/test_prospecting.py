@@ -284,3 +284,20 @@ def test_daily_ceiling_shared_across_research_and_discovery(service):
     with pytest.raises(DomainError) as err:
         service.create_research(ResearchInput(city_id=r['city_id'],category='historical_preservation',window='2026-11',rights_acknowledged=True),'test')
     assert err.value.status==429
+
+def test_slow_source_cannot_keep_a_worker_lease_forever(tmp_path,monkeypatch):
+    from app.prospecting import web as module
+    clock=[1];closed=[]
+    class Connection:
+        status=200
+        def __init__(self,*args):pass
+        def request(self,*args,**kwargs):pass
+        def getresponse(self):return self
+        def getheader(self,name,default=None):return default
+        def read1(self,n):clock[0]+=121;return b'x'
+        def close(self):closed.append(True)
+    monkeypatch.setattr(module,'validated_host',lambda *args:('example.org','93.184.216.34'))
+    monkeypatch.setattr(module,'PinnedHTTPS',Connection)
+    monkeypatch.setattr(module.time,'monotonic',lambda:clock[0])
+    with pytest.raises(DomainError,match='time limit'):PublicWeb(tmp_path).raw('https://example.org/')
+    assert closed

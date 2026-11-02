@@ -15,18 +15,21 @@ class PublicWeb:
         self.cache=Path(cache_dir);self.cache.mkdir(parents=True,exist_ok=True)
         self.robots={}
 
-    def raw(self,url,limit=2_000_000,redirects=3):
+    def raw(self,url,limit=2_000_000,redirects=3,deadline=None):
+        deadline=deadline or time.monotonic()+120
         for _ in range(redirects+1):
-            code,ctype,raw,dest=self.response(url,limit)
+            code,ctype,raw,dest=self.response(url,limit,deadline)
             if code in (301,302,303,307,308):
                 if not dest:raise DomainError('Redirect had no destination.')
                 url=urljoin(url,dest);continue
             return code,url,ctype,raw
         raise DomainError('Source exceeded the redirect limit.')
 
-    def response(self,url,limit):
+    def response(self,url,limit,deadline):
+        if time.monotonic()>=deadline:raise DomainError('Source exceeded the download time limit.')
         host,address=validated_host(url,{(urlsplit(url).hostname or '').lower().rstrip('.')})
-        conn=PinnedHTTPS(host,address);parsed=urlsplit(url);started=time.monotonic()
+        conn=PinnedHTTPS(host,address);parsed=urlsplit(url)
+        conn.timeout=max(.1,min(15,deadline-time.monotonic()))
         try:
             conn.request('GET',(parsed.path or '/')+('?' + parsed.query if parsed.query else ''),
                 headers={'User-Agent':AGENT,'Accept-Encoding':'identity','Accept':'*/*'})
@@ -36,7 +39,7 @@ class PublicWeb:
             if length and int(length)>limit:raise DomainError('Source exceeds the download size limit.')
             chunks=[];size=0
             while True:
-                if time.monotonic()-started>120:raise DomainError('Source exceeded the download time limit.')
+                if time.monotonic()>=deadline:raise DomainError('Source exceeded the download time limit.')
                 chunk=res.read1(min(65536,limit+1-size))
                 if not chunk:break
                 chunks.append(chunk);size+=len(chunk)
@@ -45,6 +48,7 @@ class PublicWeb:
         finally:conn.close()
 
     def page(self,url):
+        deadline=time.monotonic()+150
         public_url(url,required=True)
         # We never weaken TLS or silently treat a failed HTTP-only site as absent.
         if url.startswith('http://'):url='https://'+url[7:]
@@ -54,14 +58,14 @@ class PublicWeb:
             origin='https://'+(urlsplit(url).hostname or '')
             hit=self.robots.get(origin)
             if not hit or time.time()-hit[0]>600:
-                code,_,_,raw=self.raw(origin+'/robots.txt',200000)
+                code,_,_,raw=self.raw(origin+'/robots.txt',200000,deadline=deadline)
                 if code==404:policy=None
                 elif code==200:
                     policy=RobotFileParser();policy.parse(raw.decode('utf-8','replace').splitlines())
                 else:raise DomainError('Robots policy could not be checked.')
                 hit=(time.time(),policy);self.robots[origin]=hit
             if hit[1] and not hit[1].can_fetch(AGENT,url):raise DomainError('Robots policy disallows this page.')
-            code,ctype,raw,dest=self.response(url,2_000_000)
+            code,ctype,raw,dest=self.response(url,2_000_000,deadline)
             if code in (301,302,303,307,308):
                 if not dest:raise DomainError('Redirect had no destination.')
                 url=urljoin(url,dest);continue
