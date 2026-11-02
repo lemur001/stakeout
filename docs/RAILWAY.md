@@ -1,6 +1,6 @@
 # Deploy a new Stakeout workspace on Railway
 
-This is the deployment procedure for the hardened application. Complete the repository's Security and deployment checks workflow before production launch. The local audit verified Python and the browser wizard; a real Railway deployment and Linux image execution remain acceptance checks.
+This is the deployment procedure for the hardened application. The Security and deployment checks workflow passed Python tests, the HTTPS browser wizard, the dependency audit, and Linux image build/boot/restart checks. See [the verified CI run](https://github.com/lemur001/stakeout/actions/runs/41387616937). Confirm the branch you deploy has passing checks. A real Railway deployment and live provider connections still need commissioning.
 
 ## 1. Create the service and durable storage
 

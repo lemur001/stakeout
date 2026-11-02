@@ -1,6 +1,6 @@
 # Security audit and remediation
 
-Audit date: November 1, 2026 (America/Chicago). Baseline: `eabfbfa`. Scope: Python/FastAPI API, authentication, SQLite/PostgreSQL adapter, background worker, Gemini/source gateway, SMTP/IMAP, browser rendering, Docker/Railway configuration and dependency manifests. This is a source review and local regression assessment, not an independent penetration-test certification or a guarantee against compromise.
+Audit date: November 1, 2026 (America/Chicago). Baseline: `eabfbfa`. Scope: Python/FastAPI API, authentication, SQLite/PostgreSQL adapter, background worker, Gemini/source gateway, SMTP/IMAP, browser rendering, Docker/Railway configuration and dependency manifests. This is a source review with local and Linux CI regression checks, not an independent penetration-test certification or a guarantee against compromise.
 
 ## Findings and disposition
 
@@ -36,9 +36,11 @@ SQL values use parameters. Bandit flags `Service.required()` because a table nam
 
 The frontend escapes untrusted text/attributes and only renders http(s) external links. CSP disallows inline scripts, external script origins, framing, objects and arbitrary connection destinations. Generated research does not get send/approval/deployment tools, and imported contacts remain unverified. Review and mail-dispatch business gates were retained and exercised by the original suite.
 
+All eleven low-severity Bandit findings were also reviewed: the fixed interpreter `execv` after privilege dropping, cleanup/rollback exception handling, malformed-mail parsing that cannot authorize a send, and assertions/synthetic passwords in the browser test harness. They are not untrusted shell execution or production hardcoded credentials. There were no high-severity Bandit findings.
+
 ## Deployment acceptance and residual risks
 
-1. **Actual Railway/Linux container execution has not been performed in this Windows audit environment.** Docker and WSL were unavailable. The added CI job builds/boots the image with a root-owned volume, checks process UID and setup availability, and restarts it. Run that workflow and the Railway acceptance checklist before using production data. Adding CI is not evidence that CI has passed.
+1. **An actual Railway service has not been deployed.** [Linux CI passed](https://github.com/lemur001/stakeout/actions/runs/41387616937): all 83 tests, the HTTPS browser flow, dependency audit, static scan gate, image build, boot with a root-owned persistent volume, UID 10001 verification, setup availability and container restart. This validates the image; run the separate Railway acceptance checklist before using production data.
 2. Real Gemini/Brave access, SMTP/IMAP behavior, external MCP calls, provider spend controls and deliverability were not tested with real accounts. Configuration checks do not verify provider acceptance. Keep live sending off during commissioning.
 3. The PostgreSQL adapter and full backup restoration require staging tests. Schema version 2 adds tables without deleting existing records; a pre-upgrade backup is still necessary. The supported pilot topology is one web/worker process, not multiple active replicas.
 4. Encryption protects stored credential material, not a compromised running process, an XSS-capable code change, or an attacker controlling Railway/GitHub. Runtime memory and environment must contain usable key material. Seal boot variables, restrict collaborator access, enable MFA, and keep database and encryption-key backups separate.

@@ -116,7 +116,7 @@ For multiple mailbox folders, or providers using nonstandard bounce/complaint fo
 
 ## Deploy as one service
 
-The included Dockerfile serves both dashboard and API; the worker runs in the same process for the pilot. Follow [docs/RAILWAY.md](docs/RAILWAY.md) for the current deployment procedure and acceptance checks. The Docker image and Railway deployment were **not built or deployed in this Windows environment**; the added CI workflow performs the Linux container checks when run.
+The included Dockerfile serves both dashboard and API; the worker runs in the same process for the pilot. Follow [docs/RAILWAY.md](docs/RAILWAY.md) for the current deployment procedure and acceptance checks. The Linux CI workflow successfully built and booted the Docker image, verified its unprivileged server UID, and restarted it with a persistent volume. An actual Railway deployment remains to be commissioned.
 
 Before exposing the application, configure:
 

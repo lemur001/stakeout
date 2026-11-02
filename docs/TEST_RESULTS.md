@@ -4,6 +4,8 @@ The security update was tested with Python **3.13.18** on Windows: **83 tests pa
 
 The runtime dependency audit of the hash-verified lock returned **no known vulnerabilities**. Every browser ES module passed the Node syntax check. The HTTPS browser wizard was tested with synthetic credentials at desktop and mobile widths; no live provider credentials or email sends were used. Container and Railway commissioning are separate checks; see [SECURITY_AUDIT.md](SECURITY_AUDIT.md) and [RAILWAY.md](RAILWAY.md).
 
+[Linux CI](https://github.com/lemur001/stakeout/actions/runs/41387616937) also passed all 83 tests, the locked dependency audit, static scan gate, and real HTTPS browser workflow. It built the Docker image, booted it with a persistent volume, verified PID 1 runs as UID 10001, confirmed setup and health endpoints, and successfully restarted the container. No actual Railway service or live external provider was commissioned.
+
 The historical record below describes the original build and its original verification environment.
 
 # Original verification record — October 2, 2026
