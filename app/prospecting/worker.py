@@ -3,6 +3,7 @@ import hashlib
 import json
 import threading
 import time
+import socket
 from datetime import timedelta
 from pathlib import Path
 from urllib.parse import quote
@@ -12,7 +13,7 @@ from .service import Discovery
 from .web import PublicWeb
 from .providers import Providers
 from .sources import inventory,filing
-from .inspection import inspect,guesses,host,text,assess,sitemap,SOCIAL
+from .inspection import inspect,guesses,host,assess,sitemap,verify_links,SOCIAL
 
 class DiscoveryWorker:
     def __init__(self,service,web=None,provider=None):
@@ -100,7 +101,7 @@ class DiscoveryWorker:
         org=loadj(target['facts_json'],{});eid=target['entity_id'];rid=run['id'];checks=[];started=time.monotonic()
         def check(kind,url,fn):
             if time.monotonic()-started>600:raise DomainError('This candidate reached its time limit. Resume to continue from saved observations.')
-            cache_kind=kind+':'+hashlib.sha256(url.encode()).hexdigest()[:16]
+            cache_kind=kind+':v2:'+hashlib.sha256(url.encode()).hexdigest()[:16]
             with self.db.transaction(False) as tx:
                 old=tx.one("SELECT * FROM discovery_evidence WHERE entity_id=? AND kind=? AND url=? AND status='ok' AND expires_at>? ORDER BY observed_at DESC LIMIT 1",(eid,cache_kind,url,iso()))
             if old:
@@ -108,6 +109,9 @@ class DiscoveryWorker:
             try:
                 value=fn();status='ok'
                 if isinstance(value,dict) and value.get('status') in ('unavailable','unknown','not_configured'):status=value['status']
+            except socket.gaierror as exc:
+                status='not_found' if exc.errno in (socket.EAI_NONAME,getattr(socket,'EAI_NODATA',socket.EAI_NONAME)) else 'unavailable'
+                value={'note':'Domain did not resolve; this is not proof that the organization has no website.' if status=='not_found' else 'DNS lookup was temporarily unavailable.'}
             except Exception as exc:
                 value={'note':str(exc) if isinstance(exc,DomainError) else 'Source check unavailable ('+type(exc).__name__+').'};status='unavailable'
             self.discovery.evidence(rid,eid,cache_kind,url,status,value)
@@ -116,7 +120,7 @@ class DiscoveryWorker:
         if org.get('source_url'):check('inventory',org['source_url'],lambda:{k:v for k,v in org.items() if k not in ('website',)})
         if org.get('ein'):
             f=check('filing','https://projects.propublica.org/nonprofits/organizations/'+org['ein'],lambda:filing(self.web,org['ein']))
-            if f.get('website'):org['website']=f['website']
+            if f.get('website'):org.update(website=f['website'],filed_website=f['website'],website_source=f.get('source_url',''))
             if f.get('mission'):org['mission']=f['mission']
             if str(f.get('filing_year','')).isdigit():org['filing_year']=int(f['filing_year'])
         candidates=([org['website']] if org.get('website') else [])+guesses(org)
@@ -127,7 +131,13 @@ class DiscoveryWorker:
             attempted.add(url)
             def read():
                 final,raw=self.web.page(url)
-                return inspect(final,raw,org)
+                result=inspect(final,raw,org)
+                filed=org.get('filed_website','')
+                linked=bool(filed and host(url)==host(filed) and host(final)==host(filed))
+                result['identity']['filing_domain_match']=linked
+                if linked and result['identity']['name_match']:
+                    result['identity'].update(matched=True,filing_source=org.get('website_source',''))
+                return result
             found=check('website',url,read)
             if found:
                 matches.append({'url':url,'identity':found.get('identity',{})})
@@ -162,6 +172,8 @@ class DiscoveryWorker:
                 if found:
                     site['inspected_pages'].append(found)
                     for key in ('member_area','store','recent_activity_signal'):site[key]=site.get(key,False) or found.get(key,False)
+                    if found.get('latest_visible_date','')>site.get('latest_visible_date',''):site['latest_visible_date']=found['latest_visible_date']
+                    site['activity_dates']=(site.get('activity_dates',[])+[{**d,'source_url':url} for d in found.get('activity_dates',[])])[:60]
                     site['public_emails']=sorted(set(site.get('public_emails',[])+found.get('public_emails',[])))[:10]
                     if found.get('designer_credit'):site['designer_credit']=found['designer_credit']
             sitemap_url='https://'+domain+'/sitemap.xml'
@@ -188,9 +200,8 @@ class DiscoveryWorker:
                     links=data.get('links',[])
                     for link in links[:3]:
                         def verify(link=link):
-                            final,raw=self.web.page(link['source_url']);_,hrefs=text(raw)
-                            from urllib.parse import urljoin
-                            return {'verified':any(host(urljoin(final,h))==domain for h in hrefs),'source_url':final}
+                            final,raw=self.web.page(link['source_url'])
+                            return verify_links(raw,final,domain,org)
                         link['verification']=check('verify_link',link['source_url'],verify) or {'verified':None}
                     backlinks['links']=links
         return {'facts':org,'site':site,'identity_checks':matches,'searches':searches,'domain':domains,'backlinks':backlinks,

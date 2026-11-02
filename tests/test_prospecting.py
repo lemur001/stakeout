@@ -11,7 +11,7 @@ from app.models import CityInput,ReviewInput,ResearchInput,ManualReport,Candidat
 from app.prospecting.models import HuntInput,Seed
 from app.prospecting.service import Discovery
 from app.prospecting.worker import DiscoveryWorker
-from app.prospecting.inspection import inspect,assess,match
+from app.prospecting.inspection import inspect,assess,match,activity_dates,verify_links,link_assessment
 from app.prospecting.web import PublicWeb
 from app.prospecting.providers import Providers
 from app.vault import IntegrationStore,IntegrationInput
@@ -301,3 +301,90 @@ def test_slow_source_cannot_keep_a_worker_lease_forever(tmp_path,monkeypatch):
     monkeypatch.setattr(module.time,'monotonic',lambda:clock[0])
     with pytest.raises(DomainError,match='time limit'):PublicWeb(tmp_path).raw('https://example.org/')
     assert closed
+
+
+def test_visible_activity_dates_separate_history_and_future():
+    from datetime import date
+    yesterday=date.today()-timedelta(days=1);tomorrow=date.today()+timedelta(days=1)
+    raw=f'<p>Meeting {yesterday:%B} {yesterday.day}, {yesterday.year}. Next event {tomorrow.isoformat()}.</p><p>Invalid February 31, 2026.</p>'
+    found=inspect('https://society.example/',raw,{'name':'Historical Society'})
+    assert found['latest_visible_date']==yesterday.isoformat() and found['recent_activity_signal']
+    assert found['upcoming_event_date']==tomorrow.isoformat()
+    assert len(found['activity_dates'])==2 and any(d['future'] for d in found['activity_dates'])
+    assert len(activity_dates('1 Jan 2020, January 1st, 2020, 01/01/2020'))==1
+    assert not inspect('https://society.example/',f'<p>{tomorrow.isoformat()}</p>',{'name':'Society'})['recent_activity_signal']
+
+
+def test_compact_brand_name_and_ein_boundaries():
+    org={'name':'Art Reach Educational Theatre','city':'Des Plaines','ein':'123456789'}
+    assert match('<h1>ArtReach Educational Theatre</h1>',org)['name_match']
+    assert not match('<h1>ArtReach Educational Theatre</h1><p>Phone 12345, code 6789; Other Des Plainesville.</p>',org)['matched']
+    assert match('<h1>ArtReach Educational Theatre</h1><p>EIN 12-3456789</p>',org)['matched']
+
+
+@pytest.mark.parametrize('filed,redirect,expected',[(True,False,True),(False,False,False),(True,True,False)])
+def test_filing_domain_supports_identity_without_trusting_manual_sites(service,filed,redirect,expected):
+    class BrandedWeb(FakeWeb):
+        def page(self,url):
+            return ('https://unrelated.example/' if redirect else url),'<h1>ArtReach Educational Theatre</h1>'
+    r=hunt(service);d=Discovery(service)
+    org={'name':'Art Reach Educational Theatre','city':'Des Plaines','website':'https://artreach.example/'}
+    if filed:org.update(filed_website=org['website'],website_source='https://www.irs.gov/filings')
+    d.add_targets(r,[org]);w=DiscoveryWorker(service,BrandedWeb(),FakeProvider());w.tick()
+    target=d.detail(r['id'])['targets'][0]
+    assert bool(target['result']['site']) is expected
+    if expected:assert target['result']['site']['identity']['filing_domain_match']
+    assert not service.snapshot()['entities'][0]['verified_at']
+
+
+def test_nonexistent_domain_guesses_remain_unresolved_not_failed(service):
+    import socket
+    class MissingWeb(FakeWeb):
+        def page(self,url):raise socket.gaierror(socket.EAI_NONAME,'Synthetic NXDOMAIN')
+    r=hunt(service);w=DiscoveryWorker(service,MissingWeb(),FakeProvider())
+    w.tick();w.tick();w.tick()
+    target=Discovery(service).detail(r['id'])['targets'][0]
+    assert target['state']=='complete' and not target['result']['site']
+    assert all(c['status']=='not_found' for c in target['result']['checks'] if c['kind']=='website')
+    assert target['result']['scores']['link_opportunity'] is None
+    assert not service.snapshot()['entities'][0]['verified_at']
+
+
+@pytest.mark.parametrize('rel', ['nofollow','sponsored','ugc','external NOFOLLOW'])
+def test_backlink_verification_respects_link_attributes(rel):
+    raw=f'<p>Example Historical Society in Example Town</p><a href="https://www.society.example/about" rel="{rel}">Society</a>'
+    result=verify_links(raw,'https://directory.example/clubs','society.example',{'name':'Example Historical Society','city':'Example Town'})
+    assert result['verified'] and result['name_context'] and result['local_context']
+    assert result['follow_observed'] is False
+
+
+def test_backlink_verification_respects_base_robots_and_ignores_scripts():
+    org={'name':'Society','city':'Town'}
+    raw='<base href="https://society.example/"><meta name="robots" content="noindex, nofollow"><a href="about">Our society</a>'
+    result=verify_links(raw,'https://directory.example/clubs','society.example',org)
+    assert result['verified'] and result['noindex_observed'] and not result['follow_observed']
+    assert result['matches'][0]['target_url']=='https://society.example/about'
+    result=verify_links('<script>\'<a href="https://society.example/">Fake</a>\'</script><a href="https://society.example.attacker.org/">Bad</a>',
+                        'https://directory.example/','society.example',org)
+    assert not result['verified'] and result['follow_observed'] is None
+
+
+def test_link_score_uses_observed_quality_and_deduplicates_source_domains():
+    def link(url):return {'verification':{'verified':True,'source_url':url,'follow_observed':True,'name_context':True,'local_context':True}}
+    quality={'status':'ok','referring_domains':10,'links':[link('https://city.example/a'),link('https://city.example/b'),link('https://museum.example/')], 'spam_score':0}
+    noisy={'status':'ok','referring_domains':10000,'links':[],'spam_score':90}
+    q,parts,_=link_assessment(quality);n,_,_=link_assessment(noisy)
+    assert q>n and parts['observed_links']==25 and parts['observed_follow']==10 and parts['name_and_local_context']==10
+    assert link_assessment({'status':'unavailable'})[0] is None
+    assert link_assessment({'status':'ok','referring_domains':0})[0]==0
+
+
+def test_hunt_csv_escapes_formulas_and_preserves_zero_and_unknown(service):
+    import csv,io
+    r=hunt(service);d=Discovery(service);d.add_targets(r,[{'name':'=HYPERLINK("unsafe")','revenue':0,'distance':0}])
+    with service.db.transaction() as tx:
+        tx.execute('UPDATE discovery_targets SET result_json=? WHERE run_id=?',(json.dumps({'scores':{'fit':0,'link_opportunity':None,'confidence':0},'backlinks':{'referring_domains':0}}),r['id']))
+    rows=list(csv.DictReader(io.StringIO(d.export_csv(r['id']).lstrip('\ufeff'))))
+    assert rows[0]['Organization'].startswith("'=")
+    for column in ('Distance miles','Revenue USD','Project fit','Evidence confidence','Referring domains'):assert rows[0][column]=='0'
+    assert rows[0]['Link opportunity']==''

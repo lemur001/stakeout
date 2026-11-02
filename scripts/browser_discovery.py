@@ -1,5 +1,6 @@
 """Exercise discovery through real UI and HTTP with deterministic, unpaid source fixtures."""
 from app.prospecting.worker import DiscoveryWorker
+from app.prospecting.service import Discovery
 
 class BrowserSources:
     def page(self,url):
@@ -30,6 +31,14 @@ def exercise_discovery(page,service,output):
     page.get_by_role('button',name='Example Historical Society',exact=True).wait_for()
     assert '1 of 1 candidates checked' in page.locator('#hunt-results').inner_text()
     assert 'Unknown' in page.locator('#hunt-table').inner_text()
+    with page.expect_download() as download:
+        page.get_by_role('link',name='Export hunt CSV',exact=True).click()
+    export=output/'discovery-export.csv';download.value.save_as(export)
+    assert 'Example Historical Society' in export.read_text(encoding='utf-8-sig')
+    anonymous=page.context.browser.new_context(ignore_https_errors=True)
+    export_path='/api/discovery/'+Discovery(service).list()[0]['id']+'/export.csv'
+    assert anonymous.request.get(service.config.base_url+export_path).status==401
+    anonymous.close()
     page.screenshot(path=str(output/'discovery-desktop.png'),full_page=True)
     page.emulate_media(reduced_motion='reduce')
     page.set_viewport_size({'width':390,'height':844})
@@ -39,6 +48,8 @@ def exercise_discovery(page,service,output):
     page.get_by_role('button',name='Example Historical Society',exact=True).click()
     page.get_by_role('heading',name='Website findings',exact=True).wait_for()
     assert 'hello@civic-history.org' in page.locator('#sheet').inner_text()
+    assert 'Activity and size evidence' in page.locator('#sheet').inner_text()
+    assert 'Years represented in archive' in page.locator('#sheet').inner_text()
     page.get_by_role('button',name='Inspect sources',exact=True).click()
     page.get_by_role('heading',name='Discovery evidence',exact=True).wait_for()
     assert 'sitemap' in page.locator('#sheet').inner_text()
@@ -51,4 +62,15 @@ def exercise_discovery(page,service,output):
         print('Review panel:',page.locator('#sheet').inner_text()[:300])
         raise
     page.get_by_role('button',name='Close dialog',exact=True).click()
-    print('Discovery browser passed: create hunt, durable worker, rankings, evidence, campaign review and desktop/mobile layout; no paid calls.')
+    # A large hunt must keep every row reachable, including pending/unknown results.
+    discovery=Discovery(service);run=discovery.list()[0]
+    discovery.add_targets(run,[{'name':f'Pagination candidate {n:03d}'} for n in range(51)])
+    discovery.control(run['id'],'pause','browser-test')
+    page.reload()
+    page.get_by_role('button',name='Next 50',exact=True).click()
+    assert 'Showing 51–52.' in page.locator('#hunt-table').inner_text()
+    assert page.get_by_role('button',name='Next 50',exact=True).is_disabled()
+    page.get_by_label('Filter organizations',exact=True).fill('Pagination candidate 050')
+    assert 'Showing 1–1.' in page.locator('#hunt-table').inner_text()
+    page.get_by_role('button',name='Pagination candidate 050',exact=True).wait_for()
+    print('Discovery browser passed: create hunt, worker, rankings, evidence, campaign review, protected CSV, pagination and desktop/mobile layout; no paid calls.')

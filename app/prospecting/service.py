@@ -47,6 +47,17 @@ class Discovery:
         r['params']=loadj(r.pop('params_json'),{});r.pop('lease_owner',None);r.pop('lease_until',None)
         return {'run':r,'targets':rows,'spend':ledger}
 
+    def export_csv(self,id):
+        import csv,io
+        from ..core import clean_csv_cell
+        data=self.detail(id);out=io.StringIO(newline='');writer=csv.writer(out)
+        writer.writerow(['Organization','Campaign','Check status','Website candidate','EIN','Distance miles','Revenue USD','Filing year','Project fit','Link opportunity','Evidence confidence','Referring domains','Evidence gaps'])
+        for row in data['targets']:
+            r=row['result'];s=r.get('scores',{});f=r.get('facts',row['facts'])
+            values=[row['name'],data['run']['campaign'],row['state'],r.get('site',{}).get('url',''),f.get('ein',''),f.get('distance'),f.get('revenue'),f.get('filing_year'),s.get('fit'),s.get('link_opportunity'),s.get('confidence'),r.get('backlinks',{}).get('referring_domains'),' | '.join(s.get('gaps',[]))]
+            writer.writerow([clean_csv_cell('' if v is None else str(v)) for v in values])
+        return '\ufeff'+out.getvalue()
+
     def control(self,id,action,actor):
         with self.db.transaction() as tx:
             r=self.required(tx,id)

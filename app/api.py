@@ -214,6 +214,9 @@ def create_app(config: Config | None=None) -> FastAPI:
     def new_hunt(data:HuntInput,request:Request):return discovery.create(data,actor(request))
     @app.get('/api/discovery/{id}')
     def hunt_detail(id:str):return discovery.detail(id)
+    @app.get('/api/discovery/{id}/export.csv')
+    def hunt_export(id:str):
+        return Response(discovery.export_csv(id),media_type='text/csv; charset=utf-8',headers={'Content-Disposition':f'attachment; filename="hunt-{id}.csv"'})
     @app.post('/api/discovery/{id}/{action}')
     def hunt_action(id:str,action:str,request:Request):return discovery.control(id,action,actor(request))
     @app.get('/api/entities/{id}/discovery-evidence')

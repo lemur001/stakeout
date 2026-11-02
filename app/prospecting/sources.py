@@ -78,7 +78,7 @@ def inventory(web,city,params):
         if card.get('terminated'):continue
         org['filing_year']=max(org['filing_year'],card.get('year',0))
         if params['recent_only'] and org['filing_year']<date.today().year-2:continue
-        if card.get('website'):org.update(website=card['website'],website_source=POSTCARDS)
+        if card.get('website'):org.update(website=card['website'],filed_website=card['website'],website_source=POSTCARDS)
         selected.append(org)
     selected.sort(key=lambda r:(r['distance'],r['name'],r['ein']))
     return selected[:params['max_candidates']],len(selected)
